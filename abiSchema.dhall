@@ -47,6 +47,16 @@ let Event =
 let Op = < Function : Fun | Event : Event | Constructor : Constructor | Fallback : Fallback >
 let Abi = List Op
 
+let Render : Type =
+    { libPath : Text
+    , sendValue : ∀(fun : Fun) → Text
+    , sendDef : ∀(fun : Fun) → Text
+    , callValue : ∀(fun : Fun) → Text
+    , callDef : ∀(fun : Fun) → Text
+    , createValue : ∀(constructor : Constructor) → Text
+    , createDef : ∀(constructor : Constructor) → Text
+    }
+
 in  { Abi =
         Abi
     , Op =
@@ -67,4 +77,6 @@ in  { Abi =
         SimpleArg
     , ComplexArg =
         ComplexArg
+    , Render =
+        Render
     }

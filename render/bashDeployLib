@@ -1,0 +1,97 @@
+let Text/concatMap =
+        ~/src/dhall-lang/Prelude/Text/concatMap
+      ? https://prelude.dhall-lang.org/Text/concatMap
+
+let Text/concatMapSep =
+        ~/src/dhall-lang/Prelude/Text/concatMapSep
+      ? https://prelude.dhall-lang.org/Text/concatMapSep
+
+let Hex : Type = { hex : Text, def : Text }
+
+let Void : Type = { void : Text, def : Text }
+
+let defs : Void → Text = λ(void : Void) → void.def
+
+let void : Void → Text = λ(void : Void) → void.void
+
+let eval : Text → Text = λ(code : Text) → "\$(${code})"
+
+let tag
+    : Optional Text → Text → Text
+    =   λ(tag : Optional Text)
+      → λ(code : Text)
+      → eval
+        ( Optional/fold
+          Text
+          tag
+          Text
+          (λ(t : Text) → "${t}=\${${t}-\$(${code})}; printf %s \"\$${t}\"")
+          code
+        )
+
+let defineMem
+    : Text → Text → Text
+    =   λ ( id
+          : Text
+          )
+      → λ(code : Text)
+      → ''
+        _mem_${id}() { _val_${id}=''${_val_${id}-${eval
+                                                   code}}; printf %s "$_val_${id}"; }
+        ''
+
+let callMem : Text → Text = λ(id : Text) → eval "_mem_${id}"
+
+let bytes32FromHex
+    : Hex → { bytes32 : Text, def : Text }
+    = λ(hex : Hex) → { bytes32 = eval "seth --to-bytes32 ${hex.hex}", def = "" }
+
+let asciiToHex
+    : Text → Hex
+    =   λ(ascii : Text)
+      → { hex = eval "seth --from-ascii \"${ascii}\"", def = "" }
+
+let addressToVoid
+    : { address : Text, def : Text } → Void
+    =   λ(address : { address : Text, def : Text })
+      → { void = "printf %s \"${address.address}\"", def = address.def }
+
+let sig : Text → Hex = λ(t : Text) → { hex = eval "seth sig '${t}'", def = "" }
+
+let concatDefs : List Text → Text = Text/concatMap Text (λ(def : Text) → def)
+
+let toBash
+    : List Void → Text
+    =   λ(vs : List Void)
+      → ''
+        #!/usr/bin/env bash
+        set -ex
+        
+        # Definitions
+        ${Text/concatMap Void defs vs}
+        
+        # Executions
+        ${Text/concatMapSep "\n" Void void vs}
+        ''
+
+in  { sig =
+        sig
+    , eval =
+        eval
+    , tag =
+        tag
+    , concatDefs =
+        concatDefs
+    , defineMem =
+        defineMem
+    , callMem =
+        callMem
+    , toBash =
+        toBash
+    , bytes32FromHex =
+        bytes32FromHex
+    , asciiToHex =
+        asciiToHex
+    , addressToVoid =
+        addressToVoid
+    }

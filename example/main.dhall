@@ -2,6 +2,8 @@ let List/concatMap = ~/src/dhall-lang/Prelude/List/concatMap
 
 let lib = ./abi/lib.dhall
 
+let renderLib = ./abi/renderLib.dhall
+
 let types = ./abi/types.dhall
 
 let Config = ./configSchema.dhall
@@ -27,7 +29,7 @@ let mcdGovGuard = DSGuard.create "MCD_GOV_GUARD"
 let mcdIou =
       DSToken.create/bytes32
       "MCD_IOU"
-      (lib.bytes32FromHex (lib.asciiToHex "IOU"))
+      (renderLib.bytes32FromHex (renderLib.asciiToHex "IOU"))
 
 let proxyFactory = DSProxyFactory.create "PROXY_FACTORY"
 
@@ -41,10 +43,10 @@ let faucet =
       (lib.toUint256 (lib.ethToWei 50))
 
 let sig_mint/address/uint256 =
-      lib.bytes32FromHex (lib.sig "mint(address,uint256)")
+      renderLib.bytes32FromHex (renderLib.sig "mint(address,uint256)")
 
 let sig_burn/address/uint256 =
-      lib.bytes32FromHex (lib.sig "burn(address,uint256)")
+      renderLib.bytes32FromHex (renderLib.sig "burn(address,uint256)")
 
 let baseDeployment =
         λ(c : Config)
@@ -64,13 +66,13 @@ let baseDeployment =
           c.mcdFlap
           c.mcdGov
           sig_burn/address/uint256
-        , lib.optionalVoid (Some (lib.addressToVoid multicall))
+        , lib.optionalVoid (Some (renderLib.addressToVoid multicall))
         ]
 
 let deploy =
         λ(deploys : List (Config → List types.void))
       → λ(config : Config)
-      → lib.toBash
+      → renderLib.toBash
         ( List/concatMap
           (Config → List types.void)
           types.void

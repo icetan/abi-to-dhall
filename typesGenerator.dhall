@@ -16,19 +16,18 @@ let typeToDhallType
 
 let typeToDhallConstructor
     : Text → Text
-    =   λ ( t
-          : Text
-          )
-      → ''
-        ${t} = λ(val : Text) → { ${t} = val, def = "" },
-        ${t}_mem = λ(tag : Text) → λ(val : Text) → { ${t} = lib.callMem tag, def = lib.defineMem tag val }
-        ''
+    = λ(t : Text) → "${t} = λ(val : Text) → { ${t} = val, def = \"\" }\n"
+
+-- TODO: generalize rendering of memoized constructor
+--
+--  , ${t}_mem = λ(tag : Text) → λ(val : Text) → { ${t} = lib.callMem tag, def = lib.defineMem tag val }
 
 let typesToDhallConstructors
     : List Text → Text
     =   λ(ls : List Text)
       → ''
         let lib = ./lib.dhall
+        
         in { ${Text/concatMapSep
                ''
                
