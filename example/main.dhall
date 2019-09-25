@@ -1,10 +1,10 @@
 let List/concatMap = ~/src/dhall-lang/Prelude/List/concatMap
 
-let lib = ./abi/lib.dhall
+let lib = ./lib/default
 
-let renderLib = ./abi/renderLib.dhall
+let renderLib = ./lib/render
 
-let types = ./abi/types.dhall
+let types = ./lib/types
 
 let Config = ./configSchema.dhall
 

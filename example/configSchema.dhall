@@ -1,4 +1,4 @@
-let types = ./abi/types.dhall
+let types = ./lib/types
 
 let PipDeploy : Type =
     < Value :

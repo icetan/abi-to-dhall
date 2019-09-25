@@ -26,7 +26,7 @@ let typesToDhallConstructors
     : List Text → Text
     =   λ(ls : List Text)
       → ''
-        let lib = ./lib.dhall
+        let lib = ./default
         
         in { ${Text/concatMapSep
                ''

@@ -176,9 +176,9 @@ let abiToDhall
       → λ(render : schema.Render)
       → λ(ops : schema.Abi)
       → ''
-        let lib = ./lib.dhall
+        let lib = ../lib/default
         
-        let renderLib = ./renderLib.dhall
+        let renderLib = ../lib/render
         
         let name = "${name}" 
         

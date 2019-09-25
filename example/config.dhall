@@ -1,4 +1,4 @@
-let types = ./abi/typeConstructors.dhall
+let types = ./lib/typeConstructors
 
 in  { mcdGov =
         types.address "0x000000000001"
