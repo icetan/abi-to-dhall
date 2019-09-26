@@ -42,11 +42,18 @@
 in pkgs.stdenv.mkDerivation {
   name = "abi-to-dhall";
   src = ./.;
-  nativeBuildInputs = with pkgs; [ makeWrapper ];
+  nativeBuildInputs = with pkgs; [ makeWrapper dhall-haskell ];
   buildPhase = "true";
   installPhase = ''
-    mkdir -p $out/{bin,lib}
-    cp -r -t $out/lib render *.dhall ${dhall-prelude}
+    mkdir -p $out/{bin,lib/backends}
+
+    ln -s ${dhall-prelude} ./Prelude
+    dhall <<<"./abiGenerator.dhall" > $out/lib/abiGenerator.dhall
+    dhall <<<"./abiSchema.dhall" > $out/lib/abiSchema.dhall
+    dhall <<<"./typesGenerator.dhall" > $out/lib/typesGenerator.dhall
+    dhall <<<"./lib.dhall" > $out/lib/lib.dhall
+    dhall <<<"./backends/deploy" > $out/lib/backends/deploy
+
     cp ./abi-to-dhall $out/bin/abi-to-dhall
     wrapProgram $out/bin/abi-to-dhall \
       --set PATH ${binPaths} \

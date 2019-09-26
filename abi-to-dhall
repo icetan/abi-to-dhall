@@ -11,9 +11,8 @@ OUT_LIB_DIR="$PWD/lib"
 if [[ $1 =~ / ]]; then
   RENDER_PATH=$(filepath "$1")
 else
-  RENDER_PATH=$(filepath "$LIB_DIR/render/$1")
+  RENDER_PATH=$(filepath "$LIB_DIR/backends/$1")
 fi
-RENDER_LIB_PATH=$(cd ${RENDER_PATH%/*} && filepath $(dhall text <<<"($RENDER_PATH).libPath"))
 
 gen() {
   local abiPath
@@ -39,10 +38,8 @@ gen() {
 
 #rm -rf "$OUT_ABI_DIR" "$OUT_LIB_DIR"
 mkdir -p "$OUT_ABI_DIR" "$OUT_LIB_DIR"
-cp "$LIB_DIR/lib.dhall" "$OUT_LIB_DIR/default"
-cp "$RENDER_LIB_PATH" "$OUT_LIB_DIR/render"
-ln -fs -t "$OUT_LIB_DIR" "$LIB_DIR/Prelude"
-chmod -R u+w "$OUT_LIB_DIR"
+dhall <<<"$LIB_DIR/lib.dhall" > "$OUT_LIB_DIR/default"
+dhall <<<"($RENDER_PATH).util" > "$OUT_LIB_DIR/backend"
 
 types='
   [ "void"

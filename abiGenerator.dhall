@@ -101,43 +101,43 @@ let funToDhallName
     = λ(fun : schema.Fun) → "${fun.name}${funSignature fun.inputs}"
 
 let createFun
-    : schema.Render → Text → schema.Constructor → Text
-    =   λ(render : schema.Render)
+    : schema.Backend → Text → schema.Constructor → Text
+    =   λ(backend : schema.Backend)
       → λ(name : Text)
       → λ(constructor : schema.Constructor)
       → ''
         create${funSignature constructor.inputs} =
             λ(tag : Text)
            ${funArgsToDhallFun constructor.inputs}
-            → { address = ${render.createValue constructor}
-              , def = ${render.createDef constructor}
+            → { address = ${backend.createValue constructor}
+              , def = ${backend.createDef constructor}
               }
         ''
 
 let send
-    : schema.Render → schema.Fun → Text
-    =   λ(render : schema.Render)
+    : schema.Backend → schema.Fun → Text
+    =   λ(backend : schema.Backend)
       → λ(fun : schema.Fun)
       → ''
         send/${funToDhallName fun} =
               λ(address : { address : Text, def : Text })${funArgsToDhallFun
                                                            fun.inputs}
-            → { void = ${render.sendValue fun}
-              , def = ${render.sendDef fun}
+            → { void = ${backend.sendValue fun}
+              , def = ${backend.sendDef fun}
               }
         ''
 
 let call
-    : schema.Render → schema.Fun → Text
-    =   λ(render : schema.Render)
+    : schema.Backend → schema.Fun → Text
+    =   λ(backend : schema.Backend)
       → λ(fun : schema.Fun)
       → ''
         call/${funToDhallName fun} =
               λ(tag : Text)
             → λ(address : { address : Text, def : Text })${funArgsToDhallFun
                                                            fun.inputs}
-            → { ${funReturnToDhallType fun.outputs} = ${render.callValue fun}
-           , def = ${render.callDef fun}
+            → { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
+           , def = ${backend.callDef fun}
               }
         ''
 
@@ -154,31 +154,31 @@ let defaultConstructor =
       }
 
 let abiOpToDhall
-    : Text → schema.Render → schema.Op → Text
+    : Text → schema.Backend → schema.Op → Text
     =   λ(name : Text)
-      → λ(render : schema.Render)
+      → λ(backend : schema.Backend)
       → λ(op : schema.Op)
       → merge
         { Function =
-            λ(fun : schema.Fun) → "${send render fun}\n, ${call render fun}"
+            λ(fun : schema.Fun) → "${send backend fun}\n, ${call backend fun}"
         , Fallback =
             λ(fallback : schema.Fallback) → "fallback = {=}"
         , Event =
             λ(event : schema.Event) → "event/${event.name} = {=}"
         , Constructor =
-            createFun render name
+            createFun backend name
         }
         op
 
 let abiToDhall
-    : Text → schema.Render → schema.Abi → Text
+    : Text → schema.Backend → schema.Abi → Text
     =   λ(name : Text)
-      → λ(render : schema.Render)
+      → λ(backend : schema.Backend)
       → λ(ops : schema.Abi)
       → ''
         let lib = ../lib/default
         
-        let renderLib = ../lib/render
+        let backend = ../lib/backend
         
         let name = "${name}" 
         
@@ -187,7 +187,7 @@ let abiToDhall
                 
                 , ''
                 schema.Op
-                (abiOpToDhall name render)
+                (abiOpToDhall name backend)
                 (   (       if hasConstructor ops
                       
                       then  [] : List schema.Op

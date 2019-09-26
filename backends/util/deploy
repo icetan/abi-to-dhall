@@ -1,33 +1,22 @@
 let Text/concatMap =
-        ./Prelude/Text/concatMap
+        ../../Prelude/Text/concatMap
       ? https://prelude.dhall-lang.org/Text/concatMap
 
 let Text/concatMapSep =
-        ./Prelude/Text/concatMapSep
+        ../../Prelude/Text/concatMapSep
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
-let Hex : Type = { hex : Text, def : Text }
+let schema = ../../abiSchema.dhall
 
-let Void : Type = { void : Text, def : Text }
+let Hex = schema.Hex
+
+let Void = schema.Void
 
 let defs : Void → Text = λ(void : Void) → void.def
 
 let void : Void → Text = λ(void : Void) → void.void
 
 let eval : Text → Text = λ(code : Text) → "\$(${code})"
-
-let tag
-    : Optional Text → Text → Text
-    =   λ(tag : Optional Text)
-      → λ(code : Text)
-      → eval
-        ( Optional/fold
-          Text
-          tag
-          Text
-          (λ(t : Text) → "${t}=\${${t}-\$(${code})}; printf %s \"\$${t}\"")
-          code
-        )
 
 let defineMem
     : Text → Text → Text
@@ -37,7 +26,7 @@ let defineMem
       → λ(code : Text)
       → ''
         _mem_${id}() { _val_${id}=''${_val_${id}-${eval
-                                                   code}}; printf %s "$_val_${id}"; }
+                                                     code}}; printf %s "$_val_${id}"; }
         ''
 
 let callMem : Text → Text = λ(id : Text) → eval "_mem_${id}"
@@ -74,24 +63,15 @@ let toBash
         ${Text/concatMapSep "\n" Void void vs}
         ''
 
-in  { sig =
-        sig
-    , eval =
-        eval
-    , tag =
-        tag
-    , concatDefs =
-        concatDefs
-    , defineMem =
-        defineMem
-    , callMem =
-        callMem
-    , toBash =
-        toBash
-    , bytes32FromHex =
-        bytes32FromHex
-    , asciiToHex =
-        asciiToHex
-    , addressToVoid =
-        addressToVoid
+let renderUtil : schema.BackendUtil =
+    { concatDefs = concatDefs
+    , defineMem = defineMem
+    , callMem = callMem
+    , sig = sig
+    , bytes32FromHex = bytes32FromHex
+    , asciiToHex = asciiToHex
+    , addressToVoid = addressToVoid
+    , render = toBash
     }
+
+in renderUtil

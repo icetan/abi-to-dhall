@@ -61,7 +61,7 @@ let funArgsToDhallCall
 let funArgNamesToDhallConcatDefs
     : List Text → Text
     =   λ(names : List Text)
-      → "(renderLib.concatDefs ([ ${Text/concatMapSep
+      → "(backend.concatDefs ([ ${Text/concatMapSep
                                     ", "
                                     Text
                                     (λ(name : Text) → "${name}.def")
@@ -90,7 +90,7 @@ let sendDef =
         λ(fun : Fun)
       → funArgNamesToDhallConcatDefs (funArgsToDhallArgNames fun.inputs)
 
-let callValue = λ(fun : Fun) → "renderLib.callMem tag"
+let callValue = λ(fun : Fun) → "backend.callMem tag"
 
 let callDef =
         λ ( fun
@@ -99,13 +99,13 @@ let callDef =
       → ''
         ${funArgNamesToDhallConcatDefs
           ([ "address" ] # funArgsToDhallArgNames fun.inputs)}
-        ++  (renderLib.defineMem tag "seth call ''${address.address} ${fun.name}(${funArgsToDhallCall
+        ++  (backend.defineMem tag "seth call ''${address.address} ${fun.name}(${funArgsToDhallCall
                                                                                    fun.inputs})(${funArgsToDhallCall
                                                                                                   fun.outputs}) ${funArgsToDhallFunValue
                                                                                                                   fun.inputs}")
         ''
 
-let createValue = λ(constructor : Constructor) → "renderLib.callMem tag"
+let createValue = λ(constructor : Constructor) → "backend.callMem tag"
 
 let createDef =
         λ ( constructor
@@ -114,13 +114,13 @@ let createDef =
       → ''
         ${funArgNamesToDhallConcatDefs
           (funArgsToDhallArgNames constructor.inputs)}
-        ++  (renderLib.defineMem tag "dapp create ''${name} ${funArgsToDhallFunValue
+        ++  (backend.defineMem tag "dapp create ''${name} ${funArgsToDhallFunValue
                                                               constructor.inputs}")
         ''
 
-let render : schema.Render =
-   { libPath =
-        "./lib/bashDeploy"
+let backend : schema.Backend =
+   { util =
+        ./util/deploy
     , sendValue =
         sendValue
     , sendDef =
@@ -135,4 +135,4 @@ let render : schema.Render =
         createDef
     }
 
-in render
+in backend
