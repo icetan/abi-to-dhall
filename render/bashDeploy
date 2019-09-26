@@ -118,7 +118,8 @@ let createDef =
                                                               constructor.inputs}")
         ''
 
-in  { libPath =
+let render : schema.Render =
+   { libPath =
         "./lib/bashDeploy"
     , sendValue =
         sendValue
@@ -133,3 +134,5 @@ in  { libPath =
     , createDef =
         createDef
     }
+
+in render
