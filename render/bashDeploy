@@ -1,9 +1,9 @@
 let Text/concatMapSep =
-        ~/src/dhall-lang/Prelude/Text/concatMapSep
+        ../Prelude/Text/concatMapSep
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
 let List/map =
-        ~/src/dhall-lang/Prelude/List/map
+        ../Prelude/List/map
       ? https://prelude.dhall-lang.org/List/map
 
 let schema = ../abiSchema.dhall
@@ -119,7 +119,7 @@ let createDef =
         ''
 
 in  { libPath =
-        "./bashDeployLib"
+        "./lib/bashDeploy"
     , sendValue =
         sendValue
     , sendDef =

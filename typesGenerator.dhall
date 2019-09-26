@@ -1,9 +1,9 @@
 let Text/concatMapSep =
-        ~/src/dhall-lang/Prelude/Text/concatMapSep
+        ./Prelude/Text/concatMapSep
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
 let List/concatMap =
-        ~/src/dhall-lang/Prelude/List/concatMap
+        ./Prelude/List/concatMap
       ? https://prelude.dhall-lang.org/List/concatMap
 
 let addListTypes

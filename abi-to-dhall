@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-set -e
+set -eo pipefail
 
 filepath() {
   echo "$(cd ${1%/*} && pwd)/${1##*/}"
 }
 
-LIB_DIR=$(cd "${0%/*}" && pwd)
+LIB_DIR=$(cd "${LIB_DIR-${0%/*}}" && pwd)
 OUT_ABI_DIR="$PWD/abi"
 OUT_LIB_DIR="$PWD/lib"
-RENDER_PATH=$(filepath "$1")
+if [[ $1 =~ / ]]; then
+  RENDER_PATH=$(filepath "$1")
+else
+  RENDER_PATH=$(filepath "$LIB_DIR/render/$1")
+fi
 RENDER_LIB_PATH=$(cd ${RENDER_PATH%/*} && filepath $(dhall text <<<"($RENDER_PATH).libPath"))
 
 gen() {
@@ -33,10 +37,12 @@ gen() {
   fi
 }
 
-rm -rf "$OUT_ABI_DIR" "$OUT_LIB_DIR"
+#rm -rf "$OUT_ABI_DIR" "$OUT_LIB_DIR"
 mkdir -p "$OUT_ABI_DIR" "$OUT_LIB_DIR"
 cp "$LIB_DIR/lib.dhall" "$OUT_LIB_DIR/default"
 cp "$RENDER_LIB_PATH" "$OUT_LIB_DIR/render"
+ln -fs -t "$OUT_LIB_DIR" "$LIB_DIR/Prelude"
+chmod -R u+w "$OUT_LIB_DIR"
 
 types='
   [ "void"

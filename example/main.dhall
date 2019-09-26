@@ -1,4 +1,6 @@
-let List/concatMap = ~/src/dhall-lang/Prelude/List/concatMap
+let List/concatMap =
+        ./lib/Prelude/List/concatMap
+      ? https://prelude.dhall-lang.org/List/concatMap
 
 let lib = ./lib/default
 

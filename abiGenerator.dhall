@@ -1,17 +1,17 @@
 let Text/concatMapSep =
-        ~/src/dhall-lang/Prelude/Text/concatMapSep
+        ./Prelude/Text/concatMapSep
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
 let Text/concatMap =
-        ~/src/dhall-lang/Prelude/Text/concatMap
+        ./Prelude/Text/concatMap
       ? https://prelude.dhall-lang.org/Text/concatMap
 
 let List/map =
-        ~/src/dhall-lang/Prelude/List/map
+        ./Prelude/List/map
       ? https://prelude.dhall-lang.org/List/map
 
 let List/filter =
-        ~/src/dhall-lang/Prelude/List/filter
+        ./Prelude/List/filter
       ? https://prelude.dhall-lang.org/List/filter
 
 let schema = ./abiSchema.dhall

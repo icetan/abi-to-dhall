@@ -1,8 +1,14 @@
-let Text/concatMapSep = ~/src/dhall-lang/Prelude/Text/concatMapSep
+let Text/concatMapSep =
+        ./Prelude/Text/concatMapSep
+      ? https://prelude.dhall-lang.org/Text/concatMapSep
 
-let Text/concatSep = ~/src/dhall-lang/Prelude/Text/concatSep
+let Text/concatMap =
+        ./Prelude/Text/concatMap
+      ? https://prelude.dhall-lang.org/Text/concatMap
 
-let Text/concatMap = ~/src/dhall-lang/Prelude/Text/concatMap
+let Text/concatSep =
+        ./Prelude/Text/concatSep
+      ? https://prelude.dhall-lang.org/Text/concatSep
 
 let Void : Type = { void : Text, def : Text }
 

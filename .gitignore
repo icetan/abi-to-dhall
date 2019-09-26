@@ -1,2 +1,3 @@
 abi/
 lib/
+!render/lib/
