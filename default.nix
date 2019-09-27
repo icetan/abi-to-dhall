@@ -47,7 +47,7 @@ in pkgs.stdenv.mkDerivation {
   installPhase = ''
     mkdir -p $out/dhall/backends
 
-    ln -s ${dhall-prelude} ./dhall/Prelude
+    ln -sf ${dhall-prelude} ./dhall/Prelude
     dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall
     dhall <<<"./dhall/backends/deploy" > $out/dhall/backends/deploy
 

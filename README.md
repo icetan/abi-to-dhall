@@ -13,7 +13,7 @@ types are passed to a smart contract function call.
 ## Install
 
 ```sh
-nix-env -i -f .
+nix-env -i -f https://github.com/icetan/abi-to-dhall/tarball/master
 ```
 
 ## Usage
