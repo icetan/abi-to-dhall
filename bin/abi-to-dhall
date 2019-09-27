@@ -5,14 +5,15 @@ filepath() {
   echo "$(cd ${1%/*} && pwd)/${1##*/}"
 }
 
-LIB_DIR=$(cd "${LIB_DIR-${0%/*}}" && pwd)
+LIB_DIR=$(cd "${LIB_DIR-${0%/*}/../dhall}" && pwd)
+PACKAGE_PATH="$LIB_DIR/package.dhall"
+if [[ $1 =~ / ]]; then
+  BACKEND_PATH=$(filepath "$1")
+else
+  BACKEND_PATH=$(filepath "$LIB_DIR/backends/$1")
+fi
 OUT_ABI_DIR="$PWD/abi"
 OUT_LIB_DIR="$PWD/lib"
-if [[ $1 =~ / ]]; then
-  RENDER_PATH=$(filepath "$1")
-else
-  RENDER_PATH=$(filepath "$LIB_DIR/backends/$1")
-fi
 
 gen() {
   local abiPath
@@ -20,14 +21,16 @@ gen() {
   local contractName
   contractName="${abiPath##*/}"
   contractName="${contractName%.*}"
+  local abiDhall
+  abiDhall="$OUT_ABI_DIR/abi_$contractName.dhall"
 
   echo -n >&2 "$abiPath → "
 
   if {
     sed 's/\[\]"/_list"/g' "$abiPath" \
-      | json-to-dhall --records-strict --unions-strict "($LIB_DIR/abiSchema.dhall).Abi" \
-      > "$OUT_ABI_DIR/abi_$contractName.dhall"
-    dhall text <<<"$LIB_DIR/abiGenerator.dhall \"$contractName\" $RENDER_PATH $OUT_ABI_DIR/abi_$contractName.dhall" \
+      | json-to-dhall --records-strict --unions-strict "($PACKAGE_PATH).abiSchema.Abi" \
+      > "$abiDhall"
+    dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$contractName\" $abiDhall" \
       | dhall format > "$OUT_ABI_DIR/$contractName"
   }; then
     echo >&2 "$OUT_ABI_DIR/$contractName"
@@ -38,8 +41,8 @@ gen() {
 
 #rm -rf "$OUT_ABI_DIR" "$OUT_LIB_DIR"
 mkdir -p "$OUT_ABI_DIR" "$OUT_LIB_DIR"
-dhall <<<"$LIB_DIR/lib.dhall" > "$OUT_LIB_DIR/default"
-dhall <<<"($RENDER_PATH).util" > "$OUT_LIB_DIR/backend"
+dhall <<<"($PACKAGE_PATH).lib" > "$OUT_LIB_DIR/default"
+dhall <<<"($BACKEND_PATH).util" > "$OUT_LIB_DIR/backend"
 
 types='
   [ "void"
@@ -51,9 +54,9 @@ types='
   , "bytes32"
   ]'
 
-dhall text <<<"($LIB_DIR/typesGenerator.dhall).constructors $types" \
+dhall text <<<"($PACKAGE_PATH).typesGenerator.constructors $types" \
   | dhall format > "$OUT_LIB_DIR/typeConstructors"
-dhall text <<<"($LIB_DIR/typesGenerator.dhall).types $types" \
+dhall text <<<"($PACKAGE_PATH).typesGenerator.types $types" \
   | dhall format > "$OUT_LIB_DIR/types"
 
 for fn in "${@:2}"; do gen "$fn"; done

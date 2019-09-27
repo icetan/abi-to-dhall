@@ -3,16 +3,12 @@ let Text/concatMapSep =
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
 let Text/concatMap =
-        ./Prelude/Text/concatMap
-      ? https://prelude.dhall-lang.org/Text/concatMap
+      ./Prelude/Text/concatMap ? https://prelude.dhall-lang.org/Text/concatMap
 
-let List/map =
-        ./Prelude/List/map
-      ? https://prelude.dhall-lang.org/List/map
+let List/map = ./Prelude/List/map ? https://prelude.dhall-lang.org/List/map
 
 let List/filter =
-        ./Prelude/List/filter
-      ? https://prelude.dhall-lang.org/List/filter
+      ./Prelude/List/filter ? https://prelude.dhall-lang.org/List/filter
 
 let schema = ./abiSchema.dhall
 
@@ -28,37 +24,31 @@ let isConstructor
     : schema.Op → Bool
     =   λ(op : schema.Op)
       → merge
-        { Function =
-            λ(_ : schema.Fun) → False
-        , Fallback =
-            λ(_ : schema.Fallback) → False
-        , Event =
-            λ(_ : schema.Event) → False
-        , Constructor =
-            λ(_ : schema.Constructor) → True
-        }
-        op
+          { Function = λ(_ : schema.Fun) → False
+          , Fallback = λ(_ : schema.Fallback) → False
+          , Event = λ(_ : schema.Event) → False
+          , Constructor = λ(_ : schema.Constructor) → True
+          }
+          op
 
 let hasConstructor
     : List schema.Op → Bool
     =   λ(ops : List schema.Op)
       → Optional/fold
-        schema.Op
-        (List/head schema.Op (List/filter schema.Op isConstructor ops))
-        Bool
-        (λ(_ : schema.Op) → True)
-        False
+          schema.Op
+          (List/head schema.Op (List/filter schema.Op isConstructor ops))
+          Bool
+          (λ(_ : schema.Op) → True)
+          False
 
 let toSimpleArg
     : FunArg → SimpleArg
     =   λ(arg : FunArg)
       → merge
-        { Simple =
-            λ(arg : SimpleArg) → arg.{ name, type }
-        , Complex =
-            λ(arg : ComplexArg) → arg.{ name, type }
-        }
-        arg
+          { Simple = λ(arg : SimpleArg) → arg.{ name, type }
+          , Complex = λ(arg : ComplexArg) → arg.{ name, type }
+          }
+          arg
 
 let toSimpleArgs
     : List FunArg → List SimpleArg
@@ -68,33 +58,33 @@ let funIndexedArgToDhallFun
     : SimpleIArg → Text
     =   λ(iarg : SimpleIArg)
       → "λ(arg${Natural/show
-                iarg.index} : { ${iarg.value.type} : Text, def : Text })"
+                  iarg.index} : { ${iarg.value.type} : Text, def : Text })"
 
 let funArgsToDhallFun
     : List FunArg → Text
     =   λ(args : List FunArg)
       → Text/concatMap
-        SimpleIArg
-        (λ(arg : SimpleIArg) → " → " ++ funIndexedArgToDhallFun arg)
-        (List/indexed SimpleArg (toSimpleArgs args))
+          SimpleIArg
+          (λ(arg : SimpleIArg) → " → " ++ funIndexedArgToDhallFun arg)
+          (List/indexed SimpleArg (toSimpleArgs args))
 
 let funReturnToDhallType
     : List FunArg → Text
     =   λ(outputs : List FunArg)
       → Optional/fold
-        SimpleArg
-        (List/head SimpleArg (toSimpleArgs outputs))
-        Text
-        (λ(arg : SimpleArg) → arg.type)
-        "void"
+          SimpleArg
+          (List/head SimpleArg (toSimpleArgs outputs))
+          Text
+          (λ(arg : SimpleArg) → arg.type)
+          "void"
 
 let funSignature
     : List FunArg → Text
     =   λ(args : List FunArg)
       → Text/concatMap
-        SimpleArg
-        (λ(arg : SimpleArg) → "/${arg.type}")
-        (toSimpleArgs args)
+          SimpleArg
+          (λ(arg : SimpleArg) → "/${arg.type}")
+          (toSimpleArgs args)
 
 let funToDhallName
     : schema.Fun → Text
@@ -121,7 +111,7 @@ let send
       → ''
         send/${funToDhallName fun} =
               λ(address : { address : Text, def : Text })${funArgsToDhallFun
-                                                           fun.inputs}
+                                                             fun.inputs}
             → { void = ${backend.sendValue fun}
               , def = ${backend.sendDef fun}
               }
@@ -135,7 +125,7 @@ let call
         call/${funToDhallName fun} =
               λ(tag : Text)
             → λ(address : { address : Text, def : Text })${funArgsToDhallFun
-                                                           fun.inputs}
+                                                             fun.inputs}
             → { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
            , def = ${backend.callDef fun}
               }
@@ -143,37 +133,30 @@ let call
 
 let defaultConstructor =
       schema.Op.Constructor
-      { inputs =
-          [] : List FunArg
-      , payable =
-          False
-      , stateMutability =
-          ""
-      , type =
-          "constructor"
-      }
+        { inputs = [] : List FunArg
+        , payable = False
+        , stateMutability = ""
+        , type = "constructor"
+        }
 
 let abiOpToDhall
-    : Text → schema.Backend → schema.Op → Text
-    =   λ(name : Text)
-      → λ(backend : schema.Backend)
+    : schema.Backend → Text → schema.Op → Text
+    =   λ(backend : schema.Backend)
+      → λ(name : Text)
       → λ(op : schema.Op)
       → merge
-        { Function =
-            λ(fun : schema.Fun) → "${send backend fun}\n, ${call backend fun}"
-        , Fallback =
-            λ(fallback : schema.Fallback) → "fallback = {=}"
-        , Event =
-            λ(event : schema.Event) → "event/${event.name} = {=}"
-        , Constructor =
-            createFun backend name
-        }
-        op
+          { Function =
+              λ(fun : schema.Fun) → "${send backend fun}\n, ${call backend fun}"
+          , Fallback = λ(fallback : schema.Fallback) → "fallback = {=}"
+          , Event = λ(event : schema.Event) → "event/${event.name} = {=}"
+          , Constructor = createFun backend name
+          }
+          op
 
 let abiToDhall
-    : Text → schema.Backend → schema.Abi → Text
-    =   λ(name : Text)
-      → λ(backend : schema.Backend)
+    : schema.Backend → Text → schema.Abi → Text
+    =   λ(backend : schema.Backend)
+      → λ(name : Text)
       → λ(ops : schema.Abi)
       → ''
         let lib = ../lib/default
@@ -183,19 +166,19 @@ let abiToDhall
         let name = "${name}" 
         
         in  { ${Text/concatMapSep
-                ''
-                
-                , ''
-                schema.Op
-                (abiOpToDhall name backend)
-                (   (       if hasConstructor ops
-                      
-                      then  [] : List schema.Op
-                      
-                      else  [ defaultConstructor ]
-                    )
-                  # ops
-                )}
+                  ''
+                  
+                  , ''
+                  schema.Op
+                  (abiOpToDhall backend name)
+                  (   (       if hasConstructor ops
+                        
+                        then  [] : List schema.Op
+                        
+                        else  [ defaultConstructor ]
+                      )
+                    # ops
+                  )}
             }
         ''
 
