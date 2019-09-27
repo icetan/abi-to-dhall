@@ -5,6 +5,9 @@ let Text/concatMapSep =
 let Text/concatMap =
       ./Prelude/Text/concatMap ? https://prelude.dhall-lang.org/Text/concatMap
 
+let Text/concatSep =
+      ./Prelude/Text/concatSep ? https://prelude.dhall-lang.org/Text/concatSep
+
 let List/map = ./Prelude/List/map ? https://prelude.dhall-lang.org/List/map
 
 let List/filter =
@@ -78,17 +81,30 @@ let funReturnToDhallType
           (λ(arg : SimpleArg) → arg.type)
           "void"
 
-let funSignature
+let funArgsSignature
     : List FunArg → Text
     =   λ(args : List FunArg)
-      → Text/concatMap
+      → Text/concatMapSep
+          "-"
           SimpleArg
-          (λ(arg : SimpleArg) → "/${arg.type}")
+          (λ(arg : SimpleArg) → arg.type)
           (toSimpleArgs args)
 
-let funToDhallName
-    : schema.Fun → Text
-    = λ(fun : schema.Fun) → "${fun.name}${funSignature fun.inputs}"
+let funSignature
+    : List Text → List FunArg → Text
+    =   λ(names : List Text)
+      → λ(args : List FunArg)
+      →     Text/concatSep
+              "/"
+              (   names
+                # Optional/fold
+                    FunArg
+                    (List/head FunArg args)
+                    (List Text)
+                    (λ(arg : FunArg) → [ "" ])
+                    ([] : List Text)
+              )
+        ++  funArgsSignature args
 
 let createFun
     : schema.Backend → Text → schema.Constructor → Text
@@ -96,7 +112,7 @@ let createFun
       → λ(name : Text)
       → λ(constructor : schema.Constructor)
       → ''
-        create${funSignature constructor.inputs} =
+        ${funSignature [ "create" ] constructor.inputs} =
             λ(tag : Text)
            ${funArgsToDhallFun constructor.inputs}
             → { address = ${backend.createValue constructor}
@@ -109,7 +125,7 @@ let send
     =   λ(backend : schema.Backend)
       → λ(fun : schema.Fun)
       → ''
-        send/${funToDhallName fun} =
+        ${funSignature [ "send", fun.name ] fun.inputs} =
               λ(address : { address : Text, def : Text })${funArgsToDhallFun
                                                              fun.inputs}
             → { void = ${backend.sendValue fun}
@@ -122,7 +138,7 @@ let call
     =   λ(backend : schema.Backend)
       → λ(fun : schema.Fun)
       → ''
-        call/${funToDhallName fun} =
+        ${funSignature [ "call", fun.name ] fun.inputs} =
               λ(tag : Text)
             → λ(address : { address : Text, def : Text })${funArgsToDhallFun
                                                              fun.inputs}

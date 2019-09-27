@@ -2,9 +2,7 @@ let List/concatMap =
         ./lib/Prelude/List/concatMap
       ? https://prelude.dhall-lang.org/List/concatMap
 
-let abi-to-dhall = ../dhall/package.dhall
-
-let backend : abi-to-dhall.abiSchema.BackendUtil = ./lib/backend
+let backend = ./lib/backend
 
 let lib = ./lib/default
 
@@ -29,30 +27,30 @@ let faucet =
         "FAUCET"
         (lib.toUint256 (lib.ethToWei 50))
 
-let sig_mint/address/uint256 =
+let sig/mint/address-uint256 =
       backend.bytes32FromHex (backend.sig "mint(address,uint256)")
 
-let sig_burn/address/uint256 =
+let sig/burn/address-uint256 =
       backend.bytes32FromHex (backend.sig "burn(address,uint256)")
 
 let baseDeployment =
         λ(c : Config)
-      → [ DSToken.send/mint/address/uint256
+      → [ DSToken.send/mint/address-uint256
             c.mcdGov
             faucet
             (lib.toUint256 (lib.ethToWei 1000000))
         , DSToken.send/setAuthority/address c.mcdGov mcdGovGuard
         , RestrictedTokenFaucet.send/gulp/address faucet c.mcdGov
-        , DSGuard.send/permit/address/address/bytes32
+        , DSGuard.send/permit/address-address-bytes32
             mcdGovGuard
             c.mcdFlop
             c.mcdGov
-            sig_mint/address/uint256
-        , DSGuard.send/permit/address/address/bytes32
+            sig/mint/address-uint256
+        , DSGuard.send/permit/address-address-bytes32
             mcdGovGuard
             c.mcdFlap
             c.mcdGov
-            sig_burn/address/uint256
+            sig/burn/address-uint256
         , lib.optionalVoid (Some (backend.addressToVoid multicall))
         ]
 
