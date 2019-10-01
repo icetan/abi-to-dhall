@@ -1,13 +1,13 @@
-let types = ./lib/typeConstructors
+let types = ./lib/types
 
 in  { mcdGov =
-        types.address "0x000000000001"
+        types.address/build "0x000000000001"
     , mcdFlop =
-        types.address "0x000000000002"
+        types.address/build "0x000000000002"
     , mcdFlap =
-        types.address "0x000000000003"
+        types.address/build "0x000000000003"
     , DEPLOY_RESTRICTED_FAUCET =
         True
     , proxyRegistry =
-        Some (types.address "0x000000000004")
+        Some (types.address/build "0x000000000004")
     }

@@ -22,8 +22,9 @@ let typeToDhallConstructor
           )
       → λ(t : Text)
       → ''
-        ${t} = λ(val : Text) → { ${t} = "${backend.toLiteral "val"}", def = ([] : Def)  }
-        , ${t}ToVoid = λ(x : { ${t} : Text, def : Def }) → { void = "${backend.toVoid
+        ${t}/build = λ(val : Text) → { ${t} = "${backend.toLiteral
+                                                   "val"}", def = ([] : Def)  }
+        , ${t}/void = λ(x : { ${t} : Text, def : Def }) → { void = "${backend.toVoid
                                                                         "x.${t}"}", def = x.def }
         ''
 
@@ -31,26 +32,27 @@ let typesToDhallConstructors
     : Backend → List Text → Text
     =   λ(backend : Backend)
       → λ(ls : List Text)
-      → ''
-        let lib = ./default
-
-        let Def = List { mapKey : Natural, mapValue : Text }
-
-        in { ${Text/concatMapSep
-                 ''
-                 
-                 , ''
-                 Text
-                 (typeToDhallConstructor backend)
-                 (addListTypes ls)} }
-        ''
+      → "{ ${Text/concatMapSep
+               ''
+               
+               , ''
+               Text
+               (typeToDhallConstructor backend)
+               (addListTypes ls)} }"
 
 let typesToDhallTypes
     : List Text → Text
     =   λ(ls : List Text)
+      → "{ ${Text/concatMapSep "\n, " Text typeToDhallType (addListTypes ls)} }"
+
+let typesToDhall
+    : Backend → List Text → Text
+    =   λ(backend : Backend)
+      → λ(ls : List Text)
       → ''
         let Def = List { mapKey : Natural, mapValue : Text }
-        in { ${Text/concatMapSep "\n, " Text typeToDhallType (addListTypes ls)} }
+        
+        in ${typesToDhallTypes ls} ⫽ ${typesToDhallConstructors backend ls}
         ''
 
-in  { constructors = typesToDhallConstructors, types = typesToDhallTypes }
+in  typesToDhall

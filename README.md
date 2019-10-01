@@ -21,17 +21,32 @@ nix-env -i -f https://github.com/icetan/abi-to-dhall/tarball/master
 Deploy a `DSToken`.
 
 ```sh
-abi-to-dhall deploy out/abi/DSToken.abi
+abi-to-dhall deploy out/abi/{DSToken,Spotter}.abi
 dhall <<EOF
 let backend = ./lib/backend
 
-let types = ./lib/typeConstructors
+let types = ./lib/types
+
+let lib = ./lib/default
 
 let DSToken = ./abi/DSToken
 
-let myToken = DSToken.create/bytes32 "MY_TOKEN"
-      (backend.hexToBytes32 (backend.asciiToHex "MyToken"))
+let Spotter = ./abi/Spotter
 
-in backend.render [ (types.addressToVoid myToken) ]
+let deployment
+      = DSToken.create/bytes32
+          (backend.hexToBytes32 (backend.asciiToHex "MyToken"))
+          (λ(myToken : types.address)
+
+      → Spotter.create/address
+          myToken
+          (λ(spotter : types.address)
+
+      → lib.Deploy/plan
+            [ (types.address/void spotter) ]
+      ))
+
+
+in backend.render (lib.Deploy/chain [ deployment ] 0)
 EOF
 ```

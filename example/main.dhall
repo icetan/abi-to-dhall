@@ -12,8 +12,6 @@ let types = ./lib/types
 
 let address = types.address
 
-let constructors = ./lib/typeConstructors
-
 let RestrictedTokenFaucet = ./abi/RestrictedTokenFaucet
 
 let DSToken = ./abi/DSToken
@@ -74,9 +72,9 @@ let baseDeployment
                 multicall2 -- c.mcdGov
                 sig/burn/address-uint256
 
-            , lib.optionalVoid (Some (constructors.addressToVoid multicall))
-            , constructors.addressToVoid spotter
-            , constructors.uint256ToVoid faucetAmt
+            , lib.optionalVoid (Some (types.address/void multicall))
+            , types.address/void spotter
+            , types.uint256/void faucetAmt
             ]
       )))))))
 
@@ -85,7 +83,7 @@ let extraDeployment
     =   λ(c : Config)
       → DSGuard.create
           (λ(mjau : address)
-      → Deploy/plan [ constructors.addressToVoid mjau ])
+      → Deploy/plan [ types.address/void mjau ])
 
 let deployments = [ baseDeployment, extraDeployment ]
 

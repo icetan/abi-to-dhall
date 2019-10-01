@@ -57,9 +57,7 @@ types='
   , "bytes32"
   ]'
 
-dhall text <<<"($PACKAGE_PATH).typesGenerator.constructors $BACKEND_PATH $types" \
-  | dhall format > "$OUT_LIB_DIR/typeConstructors"
-dhall text <<<"($PACKAGE_PATH).typesGenerator.types $types" \
+dhall text <<<"($PACKAGE_PATH).typesGenerator $BACKEND_PATH $types" \
   | dhall format > "$OUT_LIB_DIR/types"
 
 for fn in "${@:2}"; do gen "$fn"; done
