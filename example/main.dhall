@@ -1,12 +1,16 @@
-let List/concatMap =
-        ./lib/Prelude/List/concatMap
-      ? https://prelude.dhall-lang.org/List/concatMap
-
 let backend = ./lib/backend
 
 let lib = ./lib/default
 
+let ChainableDeploy = lib.ChainableDeploy
+
+let Deploy/deploy = lib.Deploy/deploy
+
+let Deploy/plan = lib.Deploy/plan
+
 let types = ./lib/types
+
+let address = types.address
 
 let constructors = ./lib/typeConstructors
 
@@ -20,72 +24,71 @@ let DSGuard = ./abi/DSGuard
 
 let Config = ./configSchema.dhall
 
-let mcdGovGuard = DSGuard.create 1
-
-let multicall = Multicall.create 2
-let multicall1 = Multicall.create 3
-let multicall2 = Multicall.create 4
-
-let faucet =
-      RestrictedTokenFaucet.create/uint256
-        5
-        (lib.toUint256 (lib.ethToWei 50))
-
-let spotter =
-      (./abi/Spotter).create/address
-        6
-        faucet
-
 let sig/mint/address-uint256 =
       backend.hexToBytes32 (backend.sig "mint(address,uint256)")
 
 let sig/burn/address-uint256 =
       backend.hexToBytes32 (backend.sig "burn(address,uint256)")
 
-let baseDeployment =
-        λ(c : Config)
-      → [ DSToken.send/mint/address-uint256
-            c.mcdGov
+let baseDeployment
+      : Config → ChainableDeploy
+      =   λ(c : Config)
+        → DSGuard.create
+            (λ(mcdGovGuard : address)
+
+        → Multicall.create
+            (λ(multicall : address)
+
+        → Multicall.create
+            (λ(multicall1 : address)
+
+        → Multicall.create
+            (λ(multicall2 : address)
+
+        → RestrictedTokenFaucet.create/uint256
+            (lib.toUint256 (lib.ethToWei 50))
+            (λ(faucet : address)
+
+        → RestrictedTokenFaucet.call/amt faucet
+            (λ(faucetAmt : types.uint256)
+
+        → (./abi/Spotter).create/address
             faucet
-            (lib.toUint256 (lib.ethToWei 1000000))
-        , DSToken.send/setAuthority/address c.mcdGov mcdGovGuard
-        , RestrictedTokenFaucet.send/gulp/address faucet c.mcdGov
-        , DSGuard.send/permit/address-address-bytes32
-            mcdGovGuard
-            multicall1 -- c.mcdFlap
-            multicall2 -- c.mcdGov
-            sig/mint/address-uint256
-        , DSGuard.send/permit/address-address-bytes32
-            mcdGovGuard
-            multicall1 -- c.mcdFlap
-            multicall2 -- c.mcdGov
-            sig/burn/address-uint256
-        , lib.optionalVoid (Some (constructors.addressToVoid multicall))
+            (λ(spotter : address)
 
-        , constructors.addressToVoid spotter
-        ]
+        → Deploy/plan
+            [ DSToken.send/mint/address-uint256
+                c.mcdGov
+                faucet
+                (lib.toUint256 (lib.ethToWei 1000000))
+            , DSToken.send/setAuthority/address c.mcdGov mcdGovGuard
+            , RestrictedTokenFaucet.send/gulp/address faucet c.mcdGov
+            , DSGuard.send/permit/address-address-bytes32
+                mcdGovGuard
+                multicall1 -- c.mcdFlap
+                multicall2 -- c.mcdGov
+                sig/mint/address-uint256
+            , DSGuard.send/permit/address-address-bytes32
+                mcdGovGuard
+                multicall1 -- c.mcdFlap
+                multicall2 -- c.mcdGov
+                sig/burn/address-uint256
 
-let deploy =
-        λ(deploys : List (Config → List types.void))
-      → λ(config : Config)
-      → backend.render
-          ( List/concatMap
-              (Config → List types.void)
-              types.void
-              (λ(d : Config → List types.void) → d config)
-              deploys
-          )
+            , lib.optionalVoid (Some (constructors.addressToVoid multicall))
+            , constructors.addressToVoid spotter
+            , constructors.uint256ToVoid faucetAmt
+            ]
+      )))))))
 
-let ast =
-        λ(deploys : List (Config → List types.void))
-      → λ(config : Config)
-      → ( List/concatMap
-            (Config → List types.void)
-            types.void
-            (λ(d : Config → List types.void) → d config)
-            deploys
-        )
+let extraDeployment
+    : Config → ChainableDeploy
+    =   λ(c : Config)
+      → DSGuard.create
+          (λ(mjau : address)
+      → Deploy/plan [ constructors.addressToVoid mjau ])
 
-in  { deploy = deploy [ baseDeployment ]
-    , ast = ast [ baseDeployment ]
-    }
+let deployments = [ baseDeployment, extraDeployment ]
+
+let deploy = Deploy/deploy Config deployments
+
+in  { text = λ(c : Config) → backend.render (deploy c), ast = deploy }

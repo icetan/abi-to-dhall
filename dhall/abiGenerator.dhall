@@ -70,7 +70,7 @@ let funArgsToDhallFun
     =   λ(args : List FunArg)
       → Text/concatMap
           SimpleIArg
-          (λ(arg : SimpleIArg) → " → " ++ funIndexedArgToDhallFun arg)
+          (λ(arg : SimpleIArg) → (funIndexedArgToDhallFun arg) ++ " → ")
           (List/indexed SimpleArg (toSimpleArgs args))
 
 let funReturnToDhallType
@@ -115,11 +115,19 @@ let createFun
       → λ(constructor : schema.Constructor)
       → ''
         ${funSignature [ "create" ] constructor.inputs} =
-            λ(tag : Natural)
            ${funArgsToDhallFun constructor.inputs}
-            → { address = ${backend.createValue constructor}
+            λ(next :
+                { address : Text, def : Def }
+              → ChainableDeploy
+            )
+          → λ(deploy : Deploy)
+          → λ(tag : Natural)
+          → next
+              { address = ${backend.createValue constructor}
               , def = ${backend.createDef constructor}
               }
+              deploy
+              (tag + 1)
         ''
 
 let send
@@ -128,9 +136,9 @@ let send
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
-              λ(address : { address : Text, def : Def })${funArgsToDhallFun
-                                                             fun.inputs}
-            → { void = ${backend.sendValue fun}
+              λ(address : { address : Text, def : Def })
+            → ${funArgsToDhallFun fun.inputs}
+              { void = ${backend.sendValue fun}
               , def = ${backend.sendDef fun}
               }
         ''
@@ -141,12 +149,20 @@ let call
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "call", fun.name ] fun.inputs} =
-              λ(tag : Natural)
-            → λ(address : { address : Text, def : Def })${funArgsToDhallFun
-                                                             fun.inputs}
-            → { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
-           , def = ${backend.callDef fun}
+            λ(address : { address : Text, def : Def })
+          → ${funArgsToDhallFun fun.inputs}
+            λ(next :
+                { ${funReturnToDhallType fun.outputs}: Text, def : Def }
+              → ChainableDeploy
+            )
+          → λ(deploy : Deploy)
+          → λ(tag : Natural)
+          → next
+              { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
+              , def = ${backend.callDef fun}
               }
+              deploy
+              (tag + 1)
         ''
 
 let defaultConstructor =
@@ -178,11 +194,15 @@ let abiToDhall
       → λ(ops : schema.Abi)
       → ''
         let lib = ../lib/default
-        
+
+        let Deploy = lib.Deploy
+
+        let ChainableDeploy = lib.ChainableDeploy
+
+        let Def = lib.Def
+
         let backend = ../lib/backend
 
-        let Def = List { mapKey : Natural, mapValue : Text }
-        
         let name = "${name}" 
         
         in  { ${Text/concatMapSep
