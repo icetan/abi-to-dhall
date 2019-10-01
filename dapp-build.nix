@@ -1,8 +1,7 @@
-{ lib, stdenv, symlinkJoin, writeScriptBin, makeWrapper, runCommand
-, perl, shellcheck
+{ lib, stdenv, makeWrapper, runCommand
+, shellcheck
 , coreutils, gnugrep, gnused, findutils
-, solc
-, dapp, ethsign, seth
+, solc , dapp, ethsign, seth
 , dhall-haskell, abi-to-dhall
 }:
 
@@ -24,16 +23,6 @@ overrideOverrideAttrs (
 let
   bins = [ seth ethsign dapp coreutils gnugrep gnused ];
 
-  # Symlink all solidity packages into one directory
-  #depsMerged = symlinkJoin {
-  #  name = "${name}-solidity-packages";
-  #  paths = solidityPackages;
-  #  nativeBuildInputs = [ findutils ];
-  #  postBuild = ''
-  #    echo POST MERGE BUILD
-  #  '';
-  #};
-
   abiToDhallMerged = runCommand "${name}-abi-to-dhall-deploy" { nativeBuildInputs = [ abi-to-dhall findutils ]; } ''
     echo >&2 Building Dhall files from ABIs
     mkdir -p $out/dapp-out
@@ -44,7 +33,8 @@ let
       } -maxdepth 1 -type f -exec ln -sf -t $out/dapp-out {} \;
 
     mkdir -p $out/abi-to-dhall
-    abi-to-dhall deploy $out/dapp-out/*.abi 2> /dev/null
+    abi-to-dhall deploy $out/dapp-out/*.abi 2> stderr.log \
+      || { cat stderr.log; exit 1; }
     mv -t $out/abi-to-dhall ./lib ./abi
   '';
 

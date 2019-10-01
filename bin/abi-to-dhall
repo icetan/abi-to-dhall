@@ -27,18 +27,19 @@ gen() {
   local abiDhall
   abiDhall="$OUT_ABI_DIR/abi_$contractName.dhall"
 
-  echo -n >&2 "$abiPath → "
+  echo -n >&2 "$abiPath -> "
 
   if {
     sed 's/\[\]"/_list"/g' "$abiPath" \
       | json-to-dhall --records-strict --unions-strict "($PACKAGE_PATH).abiSchema.Abi" \
-      > "$abiDhall"
-    dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$contractName\" $abiDhall" \
+      > "$abiDhall" \
+    && dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$contractName\" $abiDhall" \
       | dhall format > "$OUT_ABI_DIR/$contractName"
   }; then
     echo >&2 "$OUT_ABI_DIR/$contractName"
   else
     echo >&2 "Failed!"
+    exit 1
   fi
 }
 
