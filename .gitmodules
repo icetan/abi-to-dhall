@@ -4,3 +4,6 @@
 [submodule "example/dapp/lib/ds-token"]
 	path = example/dapp/lib/ds-token
 	url = https://github.com/dapphub/ds-token
+[submodule "example/dapp/lib/ds-guard"]
+	path = example/dapp/lib/ds-guard
+	url = https://github.com/dapphub/ds-guard
