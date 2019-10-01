@@ -1,3 +1,6 @@
 [submodule "dhall-lang"]
 	path = dhall-lang
 	url = https://github.com/dhall-lang/dhall-lang
+[submodule "example/dapp/lib/ds-token"]
+	path = example/dapp/lib/ds-token
+	url = https://github.com/dapphub/ds-token
