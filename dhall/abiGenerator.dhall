@@ -61,7 +61,7 @@ let funIndexedArgToDhallFun
     : SimpleIArg → Text
     =   λ(iarg : SimpleIArg)
       → "λ(arg${Natural/show
-                  iarg.index} : { ${iarg.value.type} : Text, def : Text })"
+                  iarg.index} : { ${iarg.value.type} : Text, def : Optional Text })"
 
 let funArgsToDhallFun
     : List FunArg → Text
@@ -126,7 +126,7 @@ let send
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
-              λ(address : { address : Text, def : Text })${funArgsToDhallFun
+              λ(address : { address : Text, def : Optional Text })${funArgsToDhallFun
                                                              fun.inputs}
             → { void = ${backend.sendValue fun}
               , def = ${backend.sendDef fun}
@@ -140,7 +140,7 @@ let call
       → ''
         ${funSignature [ "call", fun.name ] fun.inputs} =
               λ(tag : Text)
-            → λ(address : { address : Text, def : Text })${funArgsToDhallFun
+            → λ(address : { address : Text, def : Optional Text })${funArgsToDhallFun
                                                              fun.inputs}
             → { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
            , def = ${backend.callDef fun}

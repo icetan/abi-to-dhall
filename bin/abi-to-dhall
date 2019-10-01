@@ -10,10 +10,13 @@ PACKAGE_PATH="$LIB_DIR/package.dhall"
 if [[ $1 =~ / ]]; then
   BACKEND_PATH=$(filepath "$1")
 else
-  BACKEND_PATH=$(filepath "$LIB_DIR/backends/$1")
+  BACKEND_PATH=$(filepath "$LIB_DIR/backends/$1.dhall")
 fi
-OUT_ABI_DIR="$PWD/abi"
-OUT_LIB_DIR="$PWD/lib"
+OUT_DIR="$PWD" #$(mktemp -d)
+OUT_ABI_DIR="$OUT_DIR/abi"
+OUT_LIB_DIR="$OUT_DIR/lib"
+
+#trap 'trap - EXIT; rm -rf "$OUT_DIR"' EXIT
 
 gen() {
   local abiPath
@@ -54,7 +57,7 @@ types='
   , "bytes32"
   ]'
 
-dhall text <<<"($PACKAGE_PATH).typesGenerator.constructors $types" \
+dhall text <<<"($PACKAGE_PATH).typesGenerator.constructors $BACKEND_PATH $types" \
   | dhall format > "$OUT_LIB_DIR/typeConstructors"
 dhall text <<<"($PACKAGE_PATH).typesGenerator.types $types" \
   | dhall format > "$OUT_LIB_DIR/types"

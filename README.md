@@ -22,13 +22,16 @@ Deploy a `DSToken`.
 
 ```sh
 abi-to-dhall deploy out/abi/DSToken.abi
-dhall | bash <<EOF
+dhall <<EOF
 let backend = ./lib/backend
+
+let types = ./lib/typeConstructors
 
 let DSToken = ./abi/DSToken
 
-let myToken = DSToken.create "MY_TOKEN"
+let myToken = DSToken.create/bytes32 "MY_TOKEN"
+      (backend.hexToBytes32 (backend.asciiToHex "MyToken"))
 
-in backend.render [ (backend.addressToVoid myToken) ]
+in backend.render [ (types.addressToVoid myToken) ]
 EOF
 ```

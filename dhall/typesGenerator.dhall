@@ -3,8 +3,9 @@ let Text/concatMapSep =
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
 let List/concatMap =
-        ./Prelude/List/concatMap
-      ? https://prelude.dhall-lang.org/List/concatMap
+      ./Prelude/List/concatMap ? https://prelude.dhall-lang.org/List/concatMap
+
+let Backend = (./abiSchema.dhall).Backend
 
 let addListTypes
     : List Text → List Text
@@ -12,29 +13,34 @@ let addListTypes
 
 let typeToDhallType
     : Text → Text
-    = λ(t : Text) → "${t} = { ${t} : Text, def : Text }"
+    = λ(t : Text) → "${t} = { ${t} : Text, def : Optional Text }"
 
 let typeToDhallConstructor
-    : Text → Text
-    = λ(t : Text) → "${t} = λ(val : Text) → { ${t} = val, def = \"\" }\n"
-
--- TODO: generalize rendering of memoized constructor
---
---  , ${t}_mem = λ(tag : Text) → λ(val : Text) → { ${t} = lib.callMem tag, def = lib.defineMem tag val }
+    : Backend → Text → Text
+    =   λ ( backend
+          : Backend
+          )
+      → λ(t : Text)
+      → ''
+        ${t} = λ(val : Text) → { ${t} = "${backend.toLiteral "val"}", def = None Text }
+        , ${t}ToVoid = λ(x : { ${t} : Text, def : Optional Text }) → { void = "${backend.toVoid
+                                                                        "x.${t}"}", def = x.def }
+        ''
 
 let typesToDhallConstructors
-    : List Text → Text
-    =   λ(ls : List Text)
+    : Backend → List Text → Text
+    =   λ(backend : Backend)
+      → λ(ls : List Text)
       → ''
         let lib = ./default
         
         in { ${Text/concatMapSep
-               ''
-               
-               , ''
-               Text
-               typeToDhallConstructor
-               (addListTypes ls)} }
+                 ''
+                 
+                 , ''
+                 Text
+                 (typeToDhallConstructor backend)
+                 (addListTypes ls)} }
         ''
 
 let typesToDhallTypes

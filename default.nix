@@ -49,7 +49,7 @@ in pkgs.stdenv.mkDerivation {
 
     ln -sf ${dhall-prelude} ./dhall/Prelude
     dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall
-    dhall <<<"./dhall/backends/deploy" > $out/dhall/backends/deploy
+    dhall <<<"./dhall/backends/deploy.dhall" > $out/dhall/backends/deploy.dhall
 
     cp -r ./bin $out/bin
     wrapProgram $out/bin/abi-to-dhall \
