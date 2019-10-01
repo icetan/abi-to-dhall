@@ -20,16 +20,21 @@ let DSGuard = ./abi/DSGuard
 
 let Config = ./configSchema.dhall
 
-let mcdGovGuard = DSGuard.create "MCD_GOV_GUARD"
+let mcdGovGuard = DSGuard.create 1
 
-let multicall = Multicall.create "MULTICALL"
-let multicall1 = Multicall.create "MULTICALL1"
-let multicall2 = Multicall.create "MULTICALL2"
+let multicall = Multicall.create 2
+let multicall1 = Multicall.create 3
+let multicall2 = Multicall.create 4
 
 let faucet =
       RestrictedTokenFaucet.create/uint256
-        "FAUCET"
+        5
         (lib.toUint256 (lib.ethToWei 50))
+
+let spotter =
+      (./abi/Spotter).create/address
+        6
+        faucet
 
 let sig/mint/address-uint256 =
       backend.hexToBytes32 (backend.sig "mint(address,uint256)")
@@ -56,6 +61,8 @@ let baseDeployment =
             multicall2 -- c.mcdGov
             sig/burn/address-uint256
         , lib.optionalVoid (Some (constructors.addressToVoid multicall))
+
+        , constructors.addressToVoid spotter
         ]
 
 let deploy =

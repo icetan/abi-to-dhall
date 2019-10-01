@@ -2,13 +2,11 @@ let Text/concatMapSep =
         ../../Prelude/Text/concatMapSep
       ? https://prelude.dhall-lang.org/Text/concatMapSep
 
-let List/filter = ../../Prelude/List/filter
-
 let List/map = ../../Prelude/List/map
 
-let Bool/not = ../../Prelude/Bool/not
+let List/any = ../../Prelude/List/any
 
-let Optional/null = ../../Prelude/Optional/null
+let Natural/equal = ../../Prelude/Natural/equal
 
 let schema = ../../abiSchema.dhall
 
@@ -16,68 +14,82 @@ let Hex = schema.Hex
 
 let Void = schema.Void
 
-let def : Void → Optional Text = λ(void : Void) → void.def
+let Def = schema.Def
+
+let DefEntry = { mapKey : Natural, mapValue : Text }
+
+let def : Void → Def = λ(void : Void) → void.def
 
 let undef
-    : Optional Text → Text
-    =   λ(ot : Optional Text)
-      → Optional/fold
+    : Def → Text
+    =   λ(def : Def)
+      → List/fold
+          DefEntry
+          def
           Text
-          ot
-          Text
-          (λ(t : Text) → t)
-          "echo >&2 THIS SHOULDN'T HAPPEN"
+          (   λ(e : DefEntry)
+            → λ(acc : Text)
+            → acc ++ e.mapValue
+          )
+          ""
 
 let void : Void → Text = λ(void : Void) → void.void
 
 let eval : Text → Text = λ(code : Text) → "\$(${code})"
 
 let defineMem
-    : Text → Text → Optional Text
+    : Natural → Text → Def
     =   λ ( id
-          : Text
+          : Natural
           )
       → λ(code : Text)
-      → Some
-        "_mem_${id}() { _val_${id}=\${_val_${id}-${eval
-                                                     code}}; printf %s \"\$_val_${id}\"; }\n"
+      → [
+          { mapKey = id
+          , mapValue = "_mem_${Natural/show id}() { _val_${Natural/show id}=\${_val_${Natural/show id}-${eval code}}; printf %s \"\$_val_${Natural/show id}\"; }\n"
+          }
+        ]
 
-let callMem : Text → Text = λ(id : Text) → eval "_mem_${id}"
+let callMem : Natural → Text = λ(id : Natural) → eval "_mem_${Natural/show id}"
+
+let concatDef
+    : Def → Def → Def
+    =   λ(x : Def)
+      → λ(acc : Def)
+      → List/fold
+          DefEntry
+          x
+          Def
+          (   λ(e : DefEntry)
+            → λ(acc : Def)
+            →       if List/any DefEntry (λ(n : DefEntry) → Natural/equal n.mapKey e.mapKey) acc
+              then  acc
+              else  acc # [ e ]
+          )
+          acc
 
 let concatDefs
-    : List (Optional Text) → Optional Text
-    =   λ(defs : List (Optional Text))
+    : List Def → Def
+    =   λ(defs : List Def)
       → List/fold
-          (Optional Text)
-          ( List/filter
-              (Optional Text)
-              (λ(ot : Optional Text) → Bool/not (Optional/null Text ot))
-              defs
-          )
-          (Optional Text)
-          (   λ(x : Optional Text)
-            → λ(y : Optional Text)
-            →       if Optional/null Text y
-              
-              then  if Optional/null Text x then None Text else Some (undef x)
-              
-              else  Some (undef x ++ undef y)
-          )
-          (None Text)
+          Def
+          defs
+          Def
+          concatDef
+          ([] : Def)
 
 let hexToBytes32
-    : Hex → { bytes32 : Text, def : Optional Text }
+    : Hex → { bytes32 : Text, def : Def }
     =   λ(hex : Hex)
-      → { bytes32 = eval "seth --to-bytes32 ${hex.hex}", def = None Text }
+      → { bytes32 = eval "seth --to-bytes32 ${hex.hex}", def = ([] : Def) }
 
 let asciiToHex
     : Text → Hex
     =   λ(ascii : Text)
-      → { hex = eval "seth --from-ascii \"${ascii}\"", def = None Text }
+      → { hex = eval "seth --from-ascii \"${ascii}\"", def = ([] : Def) }
 
 let sig
     : Text → Hex
-    = λ(t : Text) → { hex = eval "seth sig \"${t}\"", def = None Text }
+    = λ(t : Text) → { hex = eval "seth sig \"${t}\"", def = ([] : Def) }
 
 let toBash
     : List Void → Text
@@ -87,7 +99,7 @@ let toBash
         set -ex
         
         # Definitions
-        ${undef (concatDefs (List/map Void (Optional Text) def vs))}
+        ${undef (concatDefs (List/map Void Def def vs))}
         
         # Executions
         ${Text/concatMapSep "\n" Void void vs}

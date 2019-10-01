@@ -69,7 +69,7 @@ let funArgNamesToDhallConcatDefs
                                           (λ(name : Text) → "${name}.def")
                                           names
                                       # extra
-                                    )} ] : List (Optional Text)))"
+                                    )} ] : List Def))"
 
 let funArgsToDhallArgNames
     : List FunArg → List Text

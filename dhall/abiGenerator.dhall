@@ -15,6 +15,8 @@ let List/filter =
 
 let schema = ./abiSchema.dhall
 
+let Def = schema.Def
+
 let FunArg = schema.FunArg
 
 let SimpleArg = schema.SimpleArg
@@ -61,7 +63,7 @@ let funIndexedArgToDhallFun
     : SimpleIArg → Text
     =   λ(iarg : SimpleIArg)
       → "λ(arg${Natural/show
-                  iarg.index} : { ${iarg.value.type} : Text, def : Optional Text })"
+                  iarg.index} : { ${iarg.value.type} : Text, def : Def })"
 
 let funArgsToDhallFun
     : List FunArg → Text
@@ -113,7 +115,7 @@ let createFun
       → λ(constructor : schema.Constructor)
       → ''
         ${funSignature [ "create" ] constructor.inputs} =
-            λ(tag : Text)
+            λ(tag : Natural)
            ${funArgsToDhallFun constructor.inputs}
             → { address = ${backend.createValue constructor}
               , def = ${backend.createDef constructor}
@@ -126,7 +128,7 @@ let send
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
-              λ(address : { address : Text, def : Optional Text })${funArgsToDhallFun
+              λ(address : { address : Text, def : Def })${funArgsToDhallFun
                                                              fun.inputs}
             → { void = ${backend.sendValue fun}
               , def = ${backend.sendDef fun}
@@ -139,8 +141,8 @@ let call
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "call", fun.name ] fun.inputs} =
-              λ(tag : Text)
-            → λ(address : { address : Text, def : Optional Text })${funArgsToDhallFun
+              λ(tag : Natural)
+            → λ(address : { address : Text, def : Def })${funArgsToDhallFun
                                                              fun.inputs}
             → { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
            , def = ${backend.callDef fun}
@@ -178,6 +180,8 @@ let abiToDhall
         let lib = ../lib/default
         
         let backend = ../lib/backend
+
+        let Def = List { mapKey : Natural, mapValue : Text }
         
         let name = "${name}" 
         

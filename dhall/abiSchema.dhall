@@ -36,17 +36,21 @@ let Op =
 
 let Abi = List Op
 
-let Hex : Type = { hex : Text, def : Optional Text }
+let DefEntry : Type = { mapKey : Natural, mapValue : Text }
 
-let Void : Type = { void : Text, def : Optional Text }
+let Def : Type = List DefEntry
+
+let Hex : Type = { hex : Text, def : Def }
+
+let Void : Type = { void : Text, def : Def }
 
 let BackendUtil
     : Type
-    = { defineMem : Text → Text → Optional Text
-      , callMem : Text → Text
-      , concatDefs : List (Optional Text) → Optional Text
+    = { defineMem : Natural → Text → Def
+      , callMem : Natural → Text
+      , concatDefs : List Def → Def
       , sig : Text → Hex
-      , hexToBytes32 : Hex → { bytes32 : Text, def : Optional Text }
+      , hexToBytes32 : Hex → { bytes32 : Text, def : Def }
       , asciiToHex : Text → Hex
       , render : List Void → Text
       }
@@ -78,4 +82,6 @@ in  { Abi = Abi
     , Backend = Backend
     , Hex = Hex
     , Void = Void
+    , DefEntry = DefEntry
+    , Def = Def
     }
