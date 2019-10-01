@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}
+{ pkgs ? (import ./pkgs.nix).pkgs
 }: let
   inherit (pkgs.lib) optionalString makeBinPath;
 
@@ -39,21 +39,29 @@
 
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused dhall-haskell ];
 
-in pkgs.stdenv.mkDerivation {
-  name = "abi-to-dhall";
-  src = ./.;
-  nativeBuildInputs = with pkgs; [ makeWrapper dhall-haskell ];
-  buildPhase = "true";
-  installPhase = ''
-    mkdir -p $out/dhall/backends
+  abi-to-dhall = pkgs.stdenv.mkDerivation {
+    name = "abi-to-dhall";
+    src = pkgs.lib.sourceByRegex ./. [
+      ".*bin.*"
+      ".*dhall.*"
+    ];
+    nativeBuildInputs = with pkgs; [ makeWrapper dhall-haskell ];
+    buildPhase = "true";
+    installPhase = ''
+      mkdir -p $out/dhall/backends
 
-    ln -sf ${dhall-prelude} ./dhall/Prelude
-    dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall
-    dhall <<<"./dhall/backends/deploy.dhall" > $out/dhall/backends/deploy.dhall
+      ln -sf ${dhall-prelude} ./dhall/Prelude
+      dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall
+      dhall <<<"./dhall/backends/deploy.dhall" > $out/dhall/backends/deploy.dhall
+      dhall <<<"./dhall/backends/json.dhall" > $out/dhall/backends/json.dhall
 
-    cp -r ./bin $out/bin
-    wrapProgram $out/bin/abi-to-dhall \
-      --set PATH ${binPaths} \
-      --set LIB_DIR $out/dhall
-  '';
-}
+      cp -r ./bin $out/bin
+      wrapProgram $out/bin/abi-to-dhall \
+        --set PATH ${binPaths} \
+        --set LIB_DIR $out/dhall
+    '';
+    passthru = {
+      buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit dhall-haskell abi-to-dhall; };
+    };
+  };
+in abi-to-dhall

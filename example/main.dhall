@@ -31,20 +31,18 @@ let sig/burn/address-uint256 =
 let baseDeployment
       : Config → ChainableDeploy
       =   λ(c : Config)
+        → DSToken.create/bytes32
+            (backend.hexToBytes32 (backend.asciiToHex "MCD"))
+            (λ(mcd : address)
+
         → DSGuard.create
             (λ(mcdGovGuard : address)
 
         → Multicall.create
             (λ(multicall : address)
 
-        → Multicall.create
-            (λ(multicall1 : address)
-
-        → Multicall.create
-            (λ(multicall2 : address)
-
         → RestrictedTokenFaucet.create/uint256
-            (lib.toUint256 (lib.ethToWei 50))
+            (backend.naturalToUint256 (lib.ethToWei 50))
             (λ(faucet : address)
 
         → RestrictedTokenFaucet.call/amt faucet
@@ -56,37 +54,37 @@ let baseDeployment
 
         → Deploy/plan
             [ DSToken.send/mint/address-uint256
-                c.mcdGov
+                mcd
                 faucet
-                (lib.toUint256 (lib.ethToWei 1000000))
+                (backend.naturalToUint256 (lib.ethToWei 1000000))
             , DSToken.send/setAuthority/address c.mcdGov mcdGovGuard
-            , RestrictedTokenFaucet.send/gulp/address faucet c.mcdGov
             , DSGuard.send/permit/address-address-bytes32
                 mcdGovGuard
-                multicall1 -- c.mcdFlap
-                multicall2 -- c.mcdGov
+                c.mcdFlap
+                c.mcdGov
                 sig/mint/address-uint256
             , DSGuard.send/permit/address-address-bytes32
                 mcdGovGuard
-                multicall1 -- c.mcdFlap
-                multicall2 -- c.mcdGov
+                c.mcdFlap
+                c.mcdGov
                 sig/burn/address-uint256
 
-            , lib.optionalVoid (Some (types.address/void multicall))
-            , types.address/void spotter
-            , types.uint256/void faucetAmt
+            , types.address/output "MULTICALL" multicall
+            , types.address/output "SPOTTER" spotter
+            , types.uint256/output "FAUCET_AMOUNT" faucetAmt
             ]
-      )))))))
+      ))))))
 
 let extraDeployment
     : Config → ChainableDeploy
     =   λ(c : Config)
       → DSGuard.create
-          (λ(mjau : address)
-      → Deploy/plan [ types.address/void mjau ])
+          (   λ(mjau : address)
+            → Deploy/plan [ types.address/output "MJAU_GUARD" mjau ]
+          )
 
 let deployments = [ baseDeployment, extraDeployment ]
 
 let deploy = Deploy/deploy Config deployments
 
-in  { text = λ(c : Config) → backend.render (deploy c), ast = deploy }
+in  λ(c : Config) → backend.render (deploy c)

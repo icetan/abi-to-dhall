@@ -18,7 +18,7 @@ nix-env -i -f https://github.com/icetan/abi-to-dhall/tarball/master
 
 ## Usage
 
-Deploy a `DSToken`.
+Deploy a `Spotter`.
 
 ```sh
 abi-to-dhall deploy out/abi/{DSToken,Spotter}.abi
@@ -43,7 +43,7 @@ let deployment
           (λ(spotter : types.address)
 
       → lib.Deploy/plan
-            [ (types.address/void spotter) ]
+            [ (types.address/output "SPOTTER" spotter) ]
       ))
 
 

@@ -156,10 +156,10 @@ let createDef =
             ${"''"})''
           ]
 
-let toVoid
+let toOutput
     : Text → Text
     =   λ(val : Text)
-      → "{ \\\"void\\\": \${${val}} }"
+      → "{ \\\"op\\\": \\\"output\\\", \\\"val\\\": { \\\"id\\\": \\\"\${id}\\\", \\\"value\\\": \${${val}} } }"
 
 let toLiteral
     : Text → Text
@@ -169,8 +169,8 @@ let toLiteral
 let backend : schema.Backend =
    { util =
         util
-    , toVoid =
-        toVoid
+    , toOutput =
+        toOutput
     , toLiteral =
         toLiteral
     , sendValue =

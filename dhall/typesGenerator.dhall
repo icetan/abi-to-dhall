@@ -24,8 +24,8 @@ let typeToDhallConstructor
       → ''
         ${t}/build = λ(val : Text) → { ${t} = "${backend.toLiteral
                                                    "val"}", def = ([] : Def)  }
-        , ${t}/void = λ(x : { ${t} : Text, def : Def }) → { void = "${backend.toVoid
-                                                                        "x.${t}"}", def = x.def }
+        ,${t}/output = λ(id : Text) → λ(x : { ${t} : Text, def : Def }) → { void = "${backend.toOutput
+                                                                                        "x.${t}"}", def = x.def }
         ''
 
 let typesToDhallConstructors

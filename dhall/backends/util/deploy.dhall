@@ -16,7 +16,13 @@ let Void = schema.Void
 
 let Def = schema.Def
 
-let DefEntry = { mapKey : Natural, mapValue : Text }
+let DefEntry = schema.DefEntry
+
+let utils = ../../utils.dhall
+
+let concatDefs = utils.concatDefs
+
+let insertSort = utils.insertSort
 
 let def : Void → Def = λ(void : Void) → void.def
 
@@ -29,7 +35,7 @@ let undef
           Text
           (   λ(e : DefEntry)
             → λ(acc : Text)
-            → acc ++ e.mapValue
+            → e.mapValue ++ acc
           )
           ""
 
@@ -45,47 +51,26 @@ let defineMem
       → λ(code : Text)
       → [
           { mapKey = id
-          , mapValue = "_mem_${Natural/show id}() { _val_${Natural/show id}=\${_val_${Natural/show id}-${eval code}}; printf %s \"\$_val_${Natural/show id}\"; }\n"
+          , mapValue = "_def_${Natural/show id}=\$( ${code} )\n"
           }
         ]
 
-let callMem : Natural → Text = λ(id : Natural) → eval "_mem_${Natural/show id}"
-
-let concatDef
-    : Def → Def → Def
-    =   λ(x : Def)
-      → λ(acc : Def)
-      → List/fold
-          DefEntry
-          x
-          Def
-          (   λ(e : DefEntry)
-            → λ(acc : Def)
-            →       if List/any DefEntry (λ(n : DefEntry) → Natural/equal n.mapKey e.mapKey) acc
-              then  acc
-              else  acc # [ e ]
-          )
-          acc
-
-let concatDefs
-    : List Def → Def
-    =   λ(defs : List Def)
-      → List/fold
-          Def
-          defs
-          Def
-          concatDef
-          ([] : Def)
+let callMem : Natural → Text = λ(id : Natural) → "\${_def_${Natural/show id}}"
 
 let hexToBytes32
     : Hex → { bytes32 : Text, def : Def }
     =   λ(hex : Hex)
-      → { bytes32 = eval "seth --to-bytes32 ${hex.hex}", def = ([] : Def) }
+      → { bytes32 = eval "seth --to-bytes32 ${hex.hex}", def = hex.def }
 
 let asciiToHex
     : Text → Hex
     =   λ(ascii : Text)
       → { hex = eval "seth --from-ascii \"${ascii}\"", def = ([] : Def) }
+
+let naturalToUint256
+    : Natural → { uint256 : Text, def : Def }
+    =   λ(nat : Natural)
+      → { uint256 = eval "seth --to-uint256 \"${Natural/show nat}\"", def = ([] : Def) }
 
 let sig
     : Text → Hex
@@ -99,7 +84,7 @@ let toBash
         set -ex
         
         # Definitions
-        ${undef (concatDefs (List/map Void Def def vs))}
+        ${undef (insertSort (concatDefs (List/map Void Def def vs)))}
         
         # Executions
         ${Text/concatMapSep "\n" Void void vs}
@@ -113,6 +98,7 @@ let renderUtil
       , sig = sig
       , hexToBytes32 = hexToBytes32
       , asciiToHex = asciiToHex
+      , naturalToUint256 = naturalToUint256
       , render = toBash
       }
 

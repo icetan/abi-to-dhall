@@ -52,6 +52,7 @@ let BackendUtil
       , sig : Text → Hex
       , hexToBytes32 : Hex → { bytes32 : Text, def : Def }
       , asciiToHex : Text → Hex
+      , naturalToUint256 : Natural → { uint256 : Text, def : Def }
       , render : List Void → Text
       }
 
@@ -63,7 +64,7 @@ let Backend
       , callDef : ∀(fun : Fun) → Text
       , createValue : ∀(constructor : Constructor) → Text
       , createDef : ∀(constructor : Constructor) → Text
-      , toVoid : Text → Text
+      , toOutput : Text → Text
       , toLiteral : Text → Text
       , util : BackendUtil
       }

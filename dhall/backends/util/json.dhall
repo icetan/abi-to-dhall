@@ -18,6 +18,8 @@ let utils = ../../utils.dhall
 
 let concatDefs = utils.concatDefs
 
+let insertSort = utils.insertSort
+
 let def : Void → Def = λ(void : Void) → void.def
 
 let undef
@@ -26,7 +28,7 @@ let undef
       → Text/concatMapSep
           ",\n"
           DefEntry
-          (λ(e : DefEntry) → "\"${Natural/show e.mapKey}\": ${e.mapValue}")
+          (λ(e : DefEntry) → "{ \"id\": \"${Natural/show e.mapKey}\", \"def\": ${e.mapValue} }")
           def
 
 let void : Void → Text = λ(void : Void) → void.void
@@ -49,7 +51,7 @@ let defineMem
           }
         ]
 
-let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "\"${Natural/show id}\""
+let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "{ \"defId\" : \"${Natural/show id}\" }"
 
 let hexToBytes32
     : Hex → { bytes32 : Text, def : Def }
@@ -59,6 +61,10 @@ let asciiToHex
     : Text → Hex
     = λ(ascii : Text) → { hex = obj "asciiToHex" "\"${ascii}\"", def = ([] : Def) }
 
+let naturalToUint256
+    : Natural → { uint256 : Text, def : Def }
+    = λ(nat : Natural) → { uint256 = obj "naturalToUint256" "\"${Natural/show nat}\"", def = ([] : Def) }
+
 let sig : Text → Hex = λ(t : Text) → { hex = obj "sig" "\"${t}\"", def = ([] : Def) }
 
 let toJSON
@@ -66,9 +72,9 @@ let toJSON
     =   λ(vs : List Void)
       → ''
         {
-          "defs": {
-            ${undef (concatDefs (List/map Void Def def vs))}
-          },
+          "defs": [
+            ${undef (insertSort (concatDefs (List/map Void Def def vs)))}
+          ],
           "ast": [
             ${Text/concatMapSep ",\n" Void void vs}
           ]
@@ -83,6 +89,7 @@ let renderUtil
       , sig = sig
       , hexToBytes32 = hexToBytes32
       , asciiToHex = asciiToHex
+      , naturalToUint256 = naturalToUint256
       , render = toJSON
       }
 

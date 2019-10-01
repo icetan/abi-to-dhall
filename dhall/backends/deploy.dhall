@@ -80,7 +80,7 @@ let funArgsToDhallArgNames
           (λ(iarg : SimpleIArg) → "arg${Natural/show iarg.index}")
           (List/indexed SimpleArg (toSimpleArgs args))
 
-let toVoid : Text → Text = λ(val : Text) → "printf %s \\\"\${${val}}\\\""
+let toOutput : Text → Text = λ(val : Text) → "echo \\\"\${id}=\${${val}}\\\""
 
 let toLiteral : Text → Text = λ(val : Text) → "\${${val}}"
 
@@ -88,9 +88,9 @@ let sendValue =
         λ ( fun
           : Fun
           )
-      → "\"seth send \${address.address} ${fun.name}(${funArgsToDhallCall
-                                                         fun.inputs}) ${funArgsToDhallFunValue
-                                                                          fun.inputs}\""
+      → "\"seth send \${address.address} \\\"${fun.name}(${funArgsToDhallCall
+                                                           fun.inputs})\\\" ${funArgsToDhallFunValue
+                                                                              fun.inputs}\""
 
 let sendDef =
         λ(fun : Fun)
@@ -106,10 +106,10 @@ let callDef =
           )
       → funArgNamesToDhallConcatDefs
           ([ "address" ] # funArgsToDhallArgNames fun.inputs)
-          [ "(backend.defineMem tag \"seth call \${address.address} ${fun.name}(${funArgsToDhallCall
-                                                                                    fun.inputs})(${funArgsToDhallCall
-                                                                                                     fun.outputs}) ${funArgsToDhallFunValue
-                                                                                                                       fun.inputs}\")"
+          [ "(backend.defineMem tag \"seth call \${address.address} \\\"${fun.name}(${funArgsToDhallCall
+                                                                                      fun.inputs})(${funArgsToDhallCall
+                                                                                                     fun.outputs})\\\" ${funArgsToDhallFunValue
+                                                                                                                         fun.inputs}\")"
           ]
 
 let createValue = λ(constructor : Constructor) → "backend.callMem tag"
@@ -127,7 +127,7 @@ let createDef =
 let backend
     : schema.Backend
     = { util = ./util/deploy.dhall
-      , toVoid = toVoid
+      , toOutput = toOutput
       , toLiteral = toLiteral
       , sendValue = sendValue
       , sendDef = sendDef
