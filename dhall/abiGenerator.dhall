@@ -118,15 +118,15 @@ let createFun
            ${funArgsToDhallFun constructor.inputs}
             λ(next :
                 { address : Text, def : Def }
-              → ChainableDeploy
+              → Plan
             )
-          → λ(deploy : Deploy)
+          → λ(plan : SinglePlan)
           → λ(tag : Natural)
           → next
               { address = ${backend.createValue constructor}
               , def = ${backend.createDef constructor}
               }
-              deploy
+              plan
               (tag + 1)
         ''
 
@@ -153,15 +153,15 @@ let call
           → ${funArgsToDhallFun fun.inputs}
             λ(next :
                 { ${funReturnToDhallType fun.outputs}: Text, def : Def }
-              → ChainableDeploy
+              → Plan
             )
-          → λ(deploy : Deploy)
+          → λ(plan : SinglePlan)
           → λ(tag : Natural)
           → next
               { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
               , def = ${backend.callDef fun}
               }
-              deploy
+              plan
               (tag + 1)
         ''
 
@@ -195,11 +195,11 @@ let abiToDhall
       → ''
         let lib = ../lib/default
 
-        let Deploy = lib.Deploy
-
-        let ChainableDeploy = lib.ChainableDeploy
-
         let Def = lib.Def
+
+        let SinglePlan = lib.SinglePlan
+
+        let Plan = lib.Plan
 
         let backend = ../lib/backend
 

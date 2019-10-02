@@ -1,6 +1,4 @@
-let List/map =
-        ./Prelude/List/map
-      ? https://prelude.dhall-lang.org/List/map
+let List/map = ./Prelude/List/map ? https://prelude.dhall-lang.org/List/map
 
 let Def : Type = List { mapKey : Natural, mapValue : Text }
 
@@ -10,60 +8,97 @@ let ethToWei : Natural → Natural = λ(eth : Natural) → eth * 100000000000000
 
 let ethToGWei : Natural → Natural = λ(eth : Natural) → eth * 1000000000
 
-let optionalVoid
-    : Optional Void → Void
-    =   λ(v : Optional Void)
-      → Optional/fold
-          Void
-          v
-          Void
-          (λ(v : Void) → v)
-          { void = "", def = [] : Def }
+let Void/optional
+    : Bool → Void → Void
+    =   λ(enable : Bool)
+      → λ(v : Void)
+      → if enable then v else { void = "", def = [] : Def }
 
-let Deploy : Type = Natural → List Void
+let Run : Type = List Void
 
-let ChainableDeploy : Type = Deploy → Deploy
+let SinglePlan : Type = Natural → Run
 
-let Deploy/empty : Deploy = λ(tag : Natural) → [] : List Void
+let SinglePlan/empty : SinglePlan = λ(tag : Natural) → [] : Run
 
-let chainDeploys
-    : ChainableDeploy → Deploy → Deploy
-    = λ(cd : ChainableDeploy) → λ(chain : Deploy) → cd chain
+let Plan : Type = SinglePlan → SinglePlan
 
-let Deploy/chain
-    : List ChainableDeploy → Deploy
-    =   λ(deploys : List ChainableDeploy)
-      → List/fold ChainableDeploy deploys Deploy chainDeploys Deploy/empty
+let Plan/empty : Plan = λ(s : SinglePlan) → s
+
+let Plan/flatten
+    : Plan → SinglePlan → SinglePlan
+    = λ(p : Plan) → λ(s : SinglePlan) → p s
+
+let Plan/concat
+    : List Plan → Plan
+    =   λ(ps : List Plan)
+      → λ(s : SinglePlan)
+      → List/fold Plan ps SinglePlan Plan/flatten s
+
+let Plan/run
+    : Run → Plan
+    = λ(run : Run) → λ(next : SinglePlan) → λ(tag : Natural) → run # next tag
+
+let Plan/runThen
+    : Run → Plan → Plan
+    =   λ(run : Run)
+      → λ(after : Plan)
+      → λ(next : SinglePlan)
+      → λ(tag : Natural)
+      → run # after next tag
+
+let Plan/runAll
+    : List Plan → Plan
+    =   λ(ps : List Plan)
+      → λ(next : SinglePlan)
+      → λ(tag : Natural)
+      → Plan/concat ps next tag
+
+let Plan/optional
+    : Bool → Plan → Plan
+    = λ(enable : Bool) → λ(p : Plan) → if enable then p else Plan/empty
+
+let Module : ∀(c : Type) → Type = λ(c : Type) → c → Plan
+
+let Module/empty
+    : ∀(c : Type) → c → Plan
+    = λ(Config : Type) → λ(c : Config) → Plan/empty
+
+let Module/optional
+    : Bool → ∀(c : Type) → Module c → Module c
+    =   λ(enable : Bool)
+      → λ(Config : Type)
+      → λ(m : Module Config)
+      → if enable then m else Module/empty Config
+
+let Deploy : ∀(c : Type) → Type = λ(c : Type) → List (Module c)
 
 let Deploy/deploy
-    : ∀(c : Type) → List (c → ChainableDeploy) → c → List Void
+    : ∀(c : Type) → Deploy c → c → Run
     =   λ(Config : Type)
-      → λ(deploys : List (Config → ChainableDeploy))
+      → λ(ms : List (Module Config))
       → λ(c : Config)
-      → Deploy/chain
-          ( List/map
-              (Config → ChainableDeploy)
-              ChainableDeploy
-              (λ(d : Config → ChainableDeploy) → d c)
-              deploys
-          )
+      → Plan/concat
+          (List/map (Module Config) Plan (λ(m : Module Config) → m c) ms)
+          SinglePlan/empty
           0
-
-let Deploy/plan
-    : List Void → ChainableDeploy
-    =   λ(plan : List Void)
-      → λ(next : Deploy)
-      → λ(tag : Natural)
-      → plan # next tag
 
 in  { ethToWei = ethToWei
     , ethToGWei = ethToGWei
-    , optionalVoid = optionalVoid
+    , Void/optional = Void/optional
     , Def = Def
-    , ChainableDeploy = ChainableDeploy
+    , SinglePlan = SinglePlan
+    , SinglePlan/empty = SinglePlan/empty
+    , Plan = Plan
+    , Plan/empty = Plan/empty
+    , Plan/flatten = Plan/flatten
+    , Plan/concat = Plan/concat
+    , Plan/run = Plan/run
+    , Plan/runThen = Plan/runThen
+    , Plan/runAll = Plan/runAll
+    , Plan/optional = Plan/optional
+    , Module = Module
+    , Module/empty = Module/empty
+    , Module/optional = Module/optional
     , Deploy = Deploy
-    , Deploy/empty = Deploy/empty
-    , Deploy/chain = Deploy/chain
     , Deploy/deploy = Deploy/deploy
-    , Deploy/plan = Deploy/plan
     }

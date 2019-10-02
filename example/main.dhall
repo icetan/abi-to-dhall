@@ -2,9 +2,21 @@ let backend = ./lib/backend
 
 let lib = ./lib/default
 
-let Deploy/deploy = lib.Deploy/deploy
+let Plan/run = lib.Plan/run
 
-let Deploy/plan = lib.Deploy/plan
+let Plan/runThen = lib.Plan/runThen
+
+let Plan/runAll = lib.Plan/runAll
+
+let Plan/optional = lib.Plan/optional
+
+let Module = lib.Module
+
+let Module/optional = lib.Module/optional
+
+let Deploy = lib.Deploy
+
+let Deploy/deploy = lib.Deploy/deploy
 
 let types = ./lib/types
 
@@ -20,7 +32,32 @@ let sig/mint =
 let sig/burn =
       backend.hexToBytes32 (backend.sig "burn(address,uint256)")
 
-let baseDeployment
+let BaseOutput
+      : Type
+      = { token : types.address
+        , guard : types.address
+        }
+
+let extraModule
+      : Module BaseOutput
+      =   λ(baseOutput : BaseOutput)
+        → DSToken.create/bytes32
+            (backend.hexToBytes32 (backend.asciiToHex "EXTRA_TOKEN"))
+            (λ(token : types.address)
+
+        → Plan/run
+            [ DSToken.send/setAuthority/address token baseOutput.guard
+            , DSToken.send/mint/address-uint256
+                baseOutput.token
+                baseOutput.guard
+                (backend.naturalToUint256 (lib.ethToWei 1337))
+
+            , types.address/output "EXTRA_TOKEN" token
+            ]
+        )
+
+let baseModule
+      : Module Config
       =   λ(c : Config)
         → DSToken.create/bytes32
             (backend.hexToBytes32 (backend.asciiToHex "BASE_TOKEN"))
@@ -29,7 +66,7 @@ let baseDeployment
         → DSGuard.create
             (λ(guard : types.address)
 
-        → Deploy/plan
+        → Plan/run
             [ DSToken.send/mint/address-uint256
                 token
                 guard
@@ -51,15 +88,27 @@ let baseDeployment
             ]
       ))
 
-let extraDeployment
+let rootModule
+      : Module Config
       =   λ(c : Config)
         → DSToken.create/bytes32
-            (backend.hexToBytes32 (backend.asciiToHex "EXTRA_TOKEN"))
-            (   λ(token : types.address)
-              → Deploy/plan [ types.address/output "EXTRA_TOKEN" token ]
-            )
+            (backend.hexToBytes32 (backend.asciiToHex "ROOT_TOKEN"))
+            (λ(token : types.address)
 
-let deployments = [ baseDeployment, extraDeployment ]
+        → DSGuard.create
+            (λ(guard : types.address)
+
+        → Plan/runAll
+            [ baseModule c
+            , extraModule { token = token, guard = guard }
+            ]
+        ))
+
+let deployments
+      : Deploy Config
+      = [ rootModule
+        -- , Module/optional False Config extraModule
+        ]
 
 let deploy = Deploy/deploy Config deployments
 
