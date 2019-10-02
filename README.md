@@ -18,10 +18,10 @@ nix-env -i -f https://github.com/icetan/abi-to-dhall/tarball/master
 
 ## Usage
 
-Deploy a `Spotter`.
+Deploy a `ds-token` and `ds-guard`.
 
 ```sh
-abi-to-dhall deploy out/abi/{DSToken,Spotter}.abi
+abi-to-dhall deploy out/abi/{DSToken,DSGuard}.abi
 dhall <<EOF
 let backend = ./lib/backend
 
@@ -31,22 +31,22 @@ let lib = ./lib/default
 
 let DSToken = ./abi/DSToken
 
-let Spotter = ./abi/Spotter
+let DSGuard = ./abi/DSGuard
 
-let deployment
+let plan
       = DSToken.create/bytes32
           (backend.hexToBytes32 (backend.asciiToHex "MyToken"))
-          (λ(myToken : types.address)
+          (λ(token : types.address)
 
-      → Spotter.create/address
-          myToken
-          (λ(spotter : types.address)
+      → DSGuard.create
+          (λ(guard : types.address)
 
-      → lib.Deploy/plan
-            [ (types.address/output "SPOTTER" spotter) ]
+      → lib.Plan/run
+            [ DSToken.send/setAuthority/address token guard
+            , (types.address/output "TOKEN" token)
+            , (types.address/output "GUARD" guard)
+            ]
       ))
-
-
-in backend.render (lib.Deploy/chain [ deployment ] 0)
+in backend.render (lib.Plan/deploy plan)
 EOF
 ```

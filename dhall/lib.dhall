@@ -57,6 +57,10 @@ let Plan/optional
     : Bool → Plan → Plan
     = λ(enable : Bool) → λ(p : Plan) → if enable then p else Plan/empty
 
+let Plan/deploy
+    : Plan → Run
+    = λ(p : Plan) → p SinglePlan/empty 0
+
 let Module : ∀(c : Type) → Type = λ(c : Type) → c → Plan
 
 let Module/empty
@@ -96,6 +100,7 @@ in  { ethToWei = ethToWei
     , Plan/runThen = Plan/runThen
     , Plan/runAll = Plan/runAll
     , Plan/optional = Plan/optional
+    , Plan/deploy = Plan/deploy
     , Module = Module
     , Module/empty = Module/empty
     , Module/optional = Module/optional

@@ -100,7 +100,7 @@ let rootModule
 
         → Plan/runAll
             [ baseModule c
-            , extraModule { token = token, guard = guard }
+            , Plan/optional False (extraModule { token = token, guard = guard })
             ]
         ))
 
