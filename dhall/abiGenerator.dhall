@@ -197,6 +197,8 @@ let abiToDhall
 
         let Def = lib.Def
 
+        let DefEntry = lib.DefEntry
+
         let SinglePlan = lib.SinglePlan
 
         let Plan = lib.Plan

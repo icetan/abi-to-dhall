@@ -1,6 +1,8 @@
 let List/map = ./Prelude/List/map ? https://prelude.dhall-lang.org/List/map
 
-let Def : Type = List { mapKey : Natural, mapValue : Text }
+let DefEntry : Type = { mapKey : Natural, mapValue : Text }
+
+let Def : Type = List DefEntry
 
 let Void : Type = { void : Text, def : Def }
 
@@ -90,6 +92,7 @@ in  { ethToWei = ethToWei
     , ethToGWei = ethToGWei
     , Void/optional = Void/optional
     , Def = Def
+    , DefEntry = DefEntry
     , SinglePlan = SinglePlan
     , SinglePlan/empty = SinglePlan/empty
     , Plan = Plan
