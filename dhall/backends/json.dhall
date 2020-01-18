@@ -166,6 +166,11 @@ let toLiteral
     =   λ(val : Text)
       → "\\\"\${${val}}\\\""
 
+let toListLiteral
+    : Text → Text
+    =   λ(val : Text)
+      → "\\\"\${${val}}\\\""
+
 let backend : schema.Backend =
    { util =
         util
@@ -173,6 +178,8 @@ let backend : schema.Backend =
         toOutput
     , toLiteral =
         toLiteral
+    , toListLiteral =
+        toListLiteral
     , sendValue =
         sendValue
     , sendDef =

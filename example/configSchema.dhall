@@ -1,4 +1,4 @@
-let types = ./lib/types
+let types = ./atd/types
 
 let PipDeploy : Type =
     < Value :

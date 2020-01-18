@@ -80,9 +80,14 @@ let funArgsToDhallArgNames
           (λ(iarg : SimpleIArg) → "arg${Natural/show iarg.index}")
           (List/indexed SimpleArg (toSimpleArgs args))
 
-let toOutput : Text → Text = λ(val : Text) → "echo \\\"\${id}=\${${val}}\\\""
+let toOutput : Text → Text = λ(expr : Text) → "echo \\\"\${id}=\${${expr}}\\\""
 
-let toLiteral : Text → Text = λ(val : Text) → "\${${val}}"
+let toLiteral : Text → Text = λ(expr : Text) → "\${${expr}}"
+
+let toListLiteral
+    : Text → Text
+    =   λ(expr : Text)
+      → "[\${./Prelude/Text/concatSep \",\" (${expr})}]"
 
 let sendValue =
         λ ( fun
@@ -129,6 +134,7 @@ let backend
     = { util = ./util/deploy.dhall
       , toOutput = toOutput
       , toLiteral = toLiteral
+      , toListLiteral = toListLiteral
       , sendValue = sendValue
       , sendDef = sendDef
       , callValue = callValue

@@ -90,9 +90,11 @@ let Deploy/deploy
 
 in  { ethToWei = ethToWei
     , ethToGWei = ethToGWei
+    , Void = Void
     , Void/optional = Void/optional
     , Def = Def
     , DefEntry = DefEntry
+    , Run = Run
     , SinglePlan = SinglePlan
     , SinglePlan/empty = SinglePlan/empty
     , Plan = Plan

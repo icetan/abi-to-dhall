@@ -20,8 +20,19 @@ nix-env -i -f https://github.com/icetan/abi-to-dhall/tarball/master
 
 Deploy a `ds-token` and `ds-guard`.
 
+Generate the Dhall code "backend" from the ABIs of the desired smart contracts.
+In this case we use the `deploy` backend which will be able to generate a bash
+script that does a deployment:
+
 ```sh
 abi-to-dhall deploy out/abi/{DSToken,DSGuard}.abi
+```
+
+Import the generated Dhall code and render a `Plan` using the backend. The smart
+contract interfaces are written to `./abi/*` and the backend and other generated
+helpers like type constructors are written to `./lib/*`.
+
+```sh
 dhall <<EOF
 let backend = ./lib/backend
 

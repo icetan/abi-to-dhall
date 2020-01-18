@@ -36,6 +36,11 @@ let isConstructor
           }
           op
 
+let isntConstructor
+    : schema.Op → Bool
+    =   λ(op : schema.Op)
+      → (isConstructor op) == False
+
 let hasConstructor
     : List schema.Op → Bool
     =   λ(ops : List schema.Op)
@@ -62,15 +67,16 @@ let toSimpleArgs
 let funIndexedArgToDhallFun
     : SimpleIArg → Text
     =   λ(iarg : SimpleIArg)
-      → "λ(arg${Natural/show
+      → "(arg${Natural/show
                   iarg.index} : { ${iarg.value.type} : Text, def : Def })"
 
 let funArgsToDhallFun
-    : List FunArg → Text
-    =   λ(args : List FunArg)
+    : Text → List FunArg → Text
+    =   λ(prfx : Text)
+      → λ(args : List FunArg)
       → Text/concatMap
           SimpleIArg
-          (λ(arg : SimpleIArg) → (funIndexedArgToDhallFun arg) ++ " → ")
+          (λ(arg : SimpleIArg) → prfx ++ (funIndexedArgToDhallFun arg) ++ " → ")
           (List/indexed SimpleArg (toSimpleArgs args))
 
 let funReturnToDhallType
@@ -108,6 +114,20 @@ let funSignature
               )
         ++  funArgsSignature args
 
+let createFunType
+    : schema.Backend → Text → schema.Constructor → Text
+    =   λ(backend : schema.Backend)
+      → λ(name : Text)
+      → λ(constructor : schema.Constructor)
+      → ''
+        ${funSignature [ "create" ] constructor.inputs} :
+           ${funArgsToDhallFun "∀" constructor.inputs}
+            ∀(next : InstType → Plan)
+          → ∀(plan : SinglePlan)
+          → ∀(tag : Natural)
+          → Run
+        ''
+
 let createFun
     : schema.Backend → Text → schema.Constructor → Text
     =   λ(backend : schema.Backend)
@@ -115,19 +135,27 @@ let createFun
       → λ(constructor : schema.Constructor)
       → ''
         ${funSignature [ "create" ] constructor.inputs} =
-           ${funArgsToDhallFun constructor.inputs}
-            λ(next :
-                { address : Text, def : Def }
-              → Plan
-            )
+           ${funArgsToDhallFun "λ" constructor.inputs}
+            λ(next : InstType → Plan)
           → λ(plan : SinglePlan)
           → λ(tag : Natural)
           → next
-              { address = ${backend.createValue constructor}
-              , def = ${backend.createDef constructor}
-              }
+              (build
+                  { address = ${backend.createValue constructor}
+                  , def = ${backend.createDef constructor}
+                  })
               plan
               (tag + 1)
+        ''
+
+let sendType
+    : schema.Backend → schema.Fun → Text
+    =   λ(backend : schema.Backend)
+      → λ(fun : schema.Fun)
+      → ''
+        ${funSignature [ "send", fun.name ] fun.inputs} :
+              ${funArgsToDhallFun "∀" fun.inputs}
+              Void
         ''
 
 let send
@@ -136,11 +164,26 @@ let send
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
-              λ(address : { address : Text, def : Def })
-            → ${funArgsToDhallFun fun.inputs}
+              ${funArgsToDhallFun "λ" fun.inputs}
               { void = ${backend.sendValue fun}
               , def = ${backend.sendDef fun}
               }
+        ''
+
+let callType
+    : schema.Backend → schema.Fun → Text
+    =   λ(backend : schema.Backend)
+      → λ(fun : schema.Fun)
+      → ''
+        ${funSignature [ "call", fun.name ] fun.inputs} :
+            ${funArgsToDhallFun "∀" fun.inputs}
+            ∀(next :
+                { ${funReturnToDhallType fun.outputs}: Text, def : Def }
+              → Plan
+            )
+          → ∀(plan : SinglePlan)
+          → ∀(tag : Natural)
+          → Run
         ''
 
 let call
@@ -149,8 +192,7 @@ let call
       → λ(fun : schema.Fun)
       → ''
         ${funSignature [ "call", fun.name ] fun.inputs} =
-            λ(address : { address : Text, def : Def })
-          → ${funArgsToDhallFun fun.inputs}
+            ${funArgsToDhallFun "λ" fun.inputs}
             λ(next :
                 { ${funReturnToDhallType fun.outputs}: Text, def : Def }
               → Plan
@@ -173,6 +215,20 @@ let defaultConstructor =
         , type = "constructor"
         }
 
+let abiOpToDhallType
+    : schema.Backend → Text → schema.Op → Text
+    =   λ(backend : schema.Backend)
+      → λ(name : Text)
+      → λ(op : schema.Op)
+      → merge
+          { Function =
+              λ(fun : schema.Fun) → "${sendType backend fun}\n, ${callType backend fun}"
+          , Fallback = λ(fallback : schema.Fallback) → "fallback : {}"
+          , Event = λ(event : schema.Event) → "event/${event.name} : {}"
+          , Constructor = createFunType backend name
+          }
+          op
+
 let abiOpToDhall
     : schema.Backend → Text → schema.Op → Text
     =   λ(backend : schema.Backend)
@@ -193,34 +249,57 @@ let abiToDhall
       → λ(name : Text)
       → λ(ops : schema.Abi)
       → ''
-        let lib = ../lib/default
+        let lib = ../lib
 
         let Def = lib.Def
 
         let DefEntry = lib.DefEntry
 
+        let Void = lib.Void
+
+        let Run = lib.Run
+
         let SinglePlan = lib.SinglePlan
 
         let Plan = lib.Plan
 
-        let backend = ../lib/backend
+        let backend = ../backend
 
-        let name = "${name}" 
-        
-        in  { ${Text/concatMapSep
-                  ''
-                  
-                  , ''
+        let name = "${name}"
+
+        let InstType
+            : Type
+            = { address : { address : Text, def : Def }
+                ${Text/concatMap
                   schema.Op
-                  (abiOpToDhall backend name)
-                  (   (       if hasConstructor ops
-                        
-                        then  [] : List schema.Op
-                        
-                        else  [ defaultConstructor ]
-                      )
-                    # ops
-                  )}
+                  (λ(op : schema.Op) → ", " ++ (abiOpToDhallType backend name op))
+                  (List/filter schema.Op isntConstructor ops)
+                  }
+              }
+
+        let build
+            : ∀(address : { address : Text, def : Def }) → InstType
+            = λ(address : { address : Text, def : Def })
+            → { address = address
+                ${Text/concatMap
+                  schema.Op
+                  (λ(op : schema.Op) → ", " ++ (abiOpToDhall backend name op))
+                  (List/filter schema.Op isntConstructor ops)
+                  }
+              }
+
+        in  { Type = InstType
+            , build = build
+            , ${Text/concatMapSep
+                ''
+
+                , ''
+                schema.Op
+                (abiOpToDhall backend name)
+                ( if hasConstructor ops
+                  then  (List/filter schema.Op isConstructor ops)
+                  else  [ defaultConstructor ]
+                )}
             }
         ''
 

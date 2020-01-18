@@ -72,6 +72,11 @@ let naturalToUint256
     =   λ(nat : Natural)
       → { uint256 = eval "seth --to-uint256 \"${Natural/show nat}\"", def = ([] : Def) }
 
+let integerToInt256
+    : Integer → { int256 : Text, def : Def }
+    =   λ(int : Integer)
+      → { int256 = eval "seth --to-int256 \"${Integer/show int}\"", def = ([] : Def) }
+
 let sig
     : Text → Hex
     = λ(t : Text) → { hex = eval "seth sig \"${t}\"", def = ([] : Def) }
@@ -99,6 +104,7 @@ let renderUtil
       , hexToBytes32 = hexToBytes32
       , asciiToHex = asciiToHex
       , naturalToUint256 = naturalToUint256
+      , integerToInt256 = integerToInt256
       , render = toBash
       }
 

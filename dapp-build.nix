@@ -35,7 +35,7 @@ let
     mkdir -p $out/abi-to-dhall
     abi-to-dhall deploy $out/dapp-out/*.abi 2> stderr.log \
       || { cat stderr.log; exit 1; }
-    mv -t $out/abi-to-dhall ./lib ./abi
+    mv -t $out/abi-to-dhall ./atd
   '';
 
 in stdenv.mkDerivation ({

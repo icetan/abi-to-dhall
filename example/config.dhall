@@ -1,4 +1,4 @@
-let types = ./lib/types
+let types = ./atd/types
 
 in  { mcdGov =
         types.address/build "0x0000000000000000000000000000000000000001"

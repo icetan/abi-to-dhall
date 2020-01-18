@@ -22,19 +22,19 @@
   };
 
   dhall-haskell = let
-    version = "1.26.1";
+    version = "1.29.0";
   in pkgs.buildEnv {
     name = "dhall-haskell-${version}";
     ignoreCollisions = true;
     paths = map (x: dhallHaskellPackage ({ inherit version; } // x)) [
-      { subName = null        ; subVersion =  version; sha256 = "09960v0dq2s0qgpzg3pi5sr2c96rs9a5fyl1sdhly9rlkdpjabnm"; }
-      { subName = "json"      ; subVersion = "1.4.1" ; sha256 = "00k402x6l010b4v3xf0b1cj3v0gq51f7a7d88crwacjpaabvhf99"; }
+      { subName = null   ; subVersion =  version ; sha256 = "0nfpppsg2ahdrjkpczifcn5ixc55lc3awxrbggkcd72gf0539abr"; }
+      { subName = "json" ; subVersion = "1.6.1"  ; sha256 = "0qddrngfl926dgl29x2xdh32cgx94wkcnsm94kyx87wb4y3cbxga"; }
     ];
   };
 
   dhall-prelude = (fetchTarball {
-    url = "https://github.com/dhall-lang/dhall-lang/tarball/v10.0.0";
-    sha256 = "0gxkr9649jqpykdzqjc98gkwnjry8wp469037brfghyidwsm021m";
+    url = "https://github.com/dhall-lang/dhall-lang/tarball/v13.0.0";
+    sha256 = "0kg3rzag3irlcldck63rjspls614bc2sbs3zq44h0pzcz9v7z5h9";
   }) + "/Prelude";
 
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused dhall-haskell ];
@@ -58,7 +58,8 @@
       cp -r ./bin $out/bin
       wrapProgram $out/bin/abi-to-dhall \
         --set PATH ${binPaths} \
-        --set LIB_DIR $out/dhall
+        --set LIB_DIR $out/dhall \
+        --set PRELUDE_PATH ${dhall-prelude}
     '';
     passthru = {
       buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit dhall-haskell abi-to-dhall; };
