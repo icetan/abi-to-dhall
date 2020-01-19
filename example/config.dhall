@@ -1,13 +1,13 @@
-let types = ./atd/types
+let atd = ./atd/package
 
 in  { mcdGov =
-        types.address/build "0x0000000000000000000000000000000000000001"
+        atd.address/build "0x0000000000000000000000000000000000000001"
     , mcdFlop =
-        types.address/build "0x0000000000000000000000000000000000000002"
+        atd.address/build "0x0000000000000000000000000000000000000002"
     , mcdFlap =
-        types.address/build "0x0000000000000000000000000000000000000003"
+        atd.address/build "0x0000000000000000000000000000000000000003"
     , DEPLOY_RESTRICTED_FAUCET =
         True
     , proxyRegistry =
-        Some (types.address/build "0x0000000000000000000000000000000000000004")
+        Some (atd.address/build "0x0000000000000000000000000000000000000004")
     }

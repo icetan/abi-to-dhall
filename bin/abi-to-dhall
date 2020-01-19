@@ -38,6 +38,7 @@ gen() {
       | dhall format > "$OUT_ABI_DIR/$contractName"
   }; then
     echo >&2 "$OUT_ABI_DIR/$contractName"
+    echo "$contractName"
   else
     echo >&2 "Failed!"
     exit 1
@@ -50,32 +51,15 @@ ln -s "$PRELUDE_PATH" "$OUT_LIB_DIR/Prelude"
 dhall <<<"($PACKAGE_PATH).lib" > "$OUT_LIB_DIR/lib"
 dhall <<<"($BACKEND_PATH).util" > "$OUT_LIB_DIR/backend"
 
-types='(
-  let List/map = '"$PRELUDE_PATH"'/List/map
-  let Natural/enumerate = '"$PRELUDE_PATH"'/Natural/enumerate
-  let Conv = ('"$PACKAGE_PATH"').typesHelper.Conv
-  let IntConv = { Type = Conv.Type, default = Conv::{ type = "Integer", conv = "Integer/show" } }
-  let NatConv = { Type = Conv.Type, default = Conv::{ type = "Natural", conv = "Natural/show" } }
-  in
-  [ Conv::{ name = "void" }
-  , Conv::{ name = "hex" }
-  , Conv::{ name = "address" }
-  , Conv::{ name = "bytes" }
-  , NatConv::{ name = "uint" }
-  , IntConv::{ name = "int" }
-  ]
-  # List/map Natural Conv.Type
-      (λ(i : Natural) → Conv::{ name = "bytes${Natural/show (i + 1)}" })
-      (Natural/enumerate 32)
-  # List/map Natural Conv.Type
-      (λ(i : Natural) → NatConv::{ name = "uint${Natural/show (i * 8 + 8)}" })
-      (Natural/enumerate 32)
-  # List/map Natural Conv.Type
-      (λ(i : Natural) → IntConv::{ name = "int${Natural/show (i * 8 + 8)}" })
-      (Natural/enumerate 32)
-)'
-
-dhall text <<<"($PACKAGE_PATH).typesGenerator $BACKEND_PATH $types" \
+dhall text <<<"($PACKAGE_PATH).typesGenerator $BACKEND_PATH ($PACKAGE_PATH).typesConversions" \
   | dhall format > "$OUT_LIB_DIR/types"
 
-for fn in "${@:2}"; do gen "$fn"; done
+contracts=$(for fn in "${@:2}"; do gen "$fn"; done) || exit $?
+
+dhall format <<<"
+  { Prelude = ./Prelude/package.dhall
+  , abis =
+    {$(sed 's|\(.*\)|,\1 = ./abi/\1|;1s/,//' <<<"$contracts")
+    }
+  } ⫽ ./lib ⫽ ./backend ⫽ ./types
+" > "$OUT_LIB_DIR/package"

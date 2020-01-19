@@ -38,6 +38,7 @@
   }) + "/Prelude";
 
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused dhall-haskell ];
+  runnerBinPaths = with pkgs; lib.makeBinPath [ coreutils dhall-haskell bash seth ethsign dapp gnugrep gnused ];
 
   abi-to-dhall = pkgs.stdenv.mkDerivation {
     name = "abi-to-dhall";
@@ -60,6 +61,9 @@
         --set PATH ${binPaths} \
         --set LIB_DIR $out/dhall \
         --set PRELUDE_PATH ${dhall-prelude}
+
+      wrapProgram $out/bin/dhall-runner \
+        --set PATH ${runnerBinPaths}
     '';
     passthru = {
       buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit dhall-haskell abi-to-dhall; };

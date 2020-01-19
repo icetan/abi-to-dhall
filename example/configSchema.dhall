@@ -1,21 +1,21 @@
-let types = ./atd/types
+let atd = ./atd/package
 
 let PipDeploy : Type =
     < Value :
         { contract
-            : types.address
+            : atd.address
         , price
             : Natural
         }
     | Median :
         { contract
-            : types.address
+            : atd.address
         , signers
-            : List types.address
+            : List atd.address
         }
     >
 
-let token = 
+let token =
     { name : Text
     , pipDeploy : PipDeploy
     }
@@ -70,9 +70,9 @@ let token =
 --       }
 --     },
 
-in  { mcdGov : types.address
-    , mcdFlop: types.address
-    , mcdFlap: types.address
+in  { mcdGov : atd.address
+    , mcdFlop: atd.address
+    , mcdFlap: atd.address
     , DEPLOY_RESTRICTED_FAUCET : Bool
-    , proxyRegistry : Optional types.address
+    , proxyRegistry : Optional atd.address
     }

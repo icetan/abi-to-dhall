@@ -43,8 +43,8 @@ let typeToDhallConstructor
             void = "${backend.toOutput "x.${t.name}"}", def = x.def
           }
         , ${t.name}_list/output =
-          λ(id : Text) → λ(x : { ${t.name} : Text, def : Def }) → {
-            void = "${backend.toOutput "x.${t.name}"}", def = x.def
+          λ(id : Text) → λ(x : { ${t.name}_list : Text, def : Def }) → {
+            void = "${backend.toOutput "x.${t.name}_list"}", def = x.def
           }
         ''
 

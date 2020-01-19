@@ -1,36 +1,32 @@
-let backend = ./atd/backend
+let atd = ./atd/package
 
-let lib = ./atd/lib
+let Plan/run = atd.Plan/run
 
-let types = ./atd/types
+let Plan/runThen = atd.Plan/runThen
 
-let Plan/run = lib.Plan/run
+let Plan/runAll = atd.Plan/runAll
 
-let Plan/runThen = lib.Plan/runThen
+let Plan/optional = atd.Plan/optional
 
-let Plan/runAll = lib.Plan/runAll
+let Module = atd.Module
 
-let Plan/optional = lib.Plan/optional
+let Module/optional = atd.Module/optional
 
-let Module = lib.Module
+let Deploy = atd.Deploy
 
-let Module/optional = lib.Module/optional
+let Deploy/deploy = atd.Deploy/deploy
 
-let Deploy = lib.Deploy
+let DSToken = atd.abis.DSToken
 
-let Deploy/deploy = lib.Deploy/deploy
-
-let DSToken = ./atd/abi/DSToken
-
-let DSGuard = ./atd/abi/DSGuard
+let DSGuard = atd.abis.DSGuard
 
 let Config = ./configSchema.dhall
 
 let sig/mint =
-      backend.hexToBytes32 (backend.sig "mint(address,uint256)")
+      atd.hexToBytes32 (atd.sig "mint(address,uint256)")
 
 let sig/burn =
-      backend.hexToBytes32 (backend.sig "burn(address,uint256)")
+      atd.hexToBytes32 (atd.sig "burn(address,uint256)")
 
 let BaseOutput
       : Type
@@ -42,16 +38,16 @@ let extraModule
       : Module BaseOutput
       =   λ(baseOutput : BaseOutput)
         → DSToken.create/bytes32
-            (backend.hexToBytes32 (backend.asciiToHex "EXTRA_TOKEN"))
+            (atd.hexToBytes32 (atd.asciiToHex "EXTRA_TOKEN"))
             (λ(token : DSToken.Type)
 
         → Plan/run
             [ token.send/setAuthority/address baseOutput.guard.address
             , baseOutput.token.send/mint/address-uint256
                 baseOutput.guard.address
-                (backend.naturalToUint256 (lib.ethToWei 1337))
+                (atd.naturalToUint256 (atd.ethToWei 1337))
 
-            , types.address/output "EXTRA_TOKEN" token.address
+            , atd.address/output "EXTRA_TOKEN" token.address
             ]
         )
 
@@ -59,7 +55,7 @@ let baseModule
       : Module Config
       =   λ(c : Config)
         → DSToken.create/bytes32
-            (backend.hexToBytes32 (backend.asciiToHex "BASE_TOKEN"))
+            (atd.hexToBytes32 (atd.asciiToHex "BASE_TOKEN"))
             (λ(token : DSToken.Type)
 
         → DSGuard.create
@@ -68,7 +64,7 @@ let baseModule
         → Plan/run
             [ token.send/mint/address-uint256
                 guard.address
-                (backend.naturalToUint256 (lib.ethToWei 1000000))
+                (atd.naturalToUint256 (atd.ethToWei 1000000))
             , (DSToken.build c.mcdGov).send/setAuthority/address guard.address
             , guard.send/permit/address-address-bytes32
                 c.mcdFlap
@@ -79,8 +75,8 @@ let baseModule
                 c.mcdGov
                 sig/burn
 
-            , types.address/output "TOKEN" token.address
-            , types.address/output "GUARD" guard.address
+            , atd.address/output "TOKEN" token.address
+            , atd.address/output "GUARD" guard.address
             ]
       ))
 
@@ -88,7 +84,7 @@ let rootModule
       : Module Config
       =   λ(c : Config)
         → DSToken.create/bytes32
-            (backend.hexToBytes32 (backend.asciiToHex "ROOT_TOKEN"))
+            (atd.hexToBytes32 (atd.asciiToHex "ROOT_TOKEN"))
             (λ(token : DSToken.Type)
 
         → DSGuard.create
@@ -108,4 +104,4 @@ let deployments
 
 let deploy = Deploy/deploy Config deployments
 
-in  λ(c : Config) → backend.render (deploy c)
+in  λ(c : Config) → atd.render (deploy c)
