@@ -131,7 +131,7 @@ let createDef =
 
 let backend
     : schema.Backend
-    = { util = ./util/deploy.dhall
+    = { util = ./util/sh.dhall
       , toOutput = toOutput
       , toLiteral = toLiteral
       , toListLiteral = toListLiteral

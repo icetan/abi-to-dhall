@@ -18,6 +18,8 @@ nix-env -i -f https://github.com/icetan/abi-to-dhall/tarball/master
 
 ## Usage
 
+### Generating code from ABIs
+
 Deploy a `ds-token` and `ds-guard`.
 
 Generate the Dhall code "backend" from the ABIs of the desired smart contracts.
@@ -25,39 +27,44 @@ In this case we use the `deploy` backend which will be able to generate a bash
 script that does a deployment:
 
 ```sh
-abi-to-dhall deploy out/abi/{DSToken,DSGuard}.abi
+abi-to-dhall sh out/abi/{DSToken,DSGuard}.abi
 ```
 
-Import the generated Dhall code and render a `Plan` using the backend. The smart
-contract interfaces are written to `./abi/*` and the backend and other generated
-helpers like type constructors are written to `./lib/*`.
+Import the generated Dhall code and render a `Plan`. All generated Dhall code is
+written to `./adt` and can be imported through the `./adt/package` file.
 
 ```sh
 dhall <<EOF
-let backend = ./lib/backend
+let atd = ./atd/package
 
-let types = ./lib/types
+let DSToken = atd.abis.DSToken
 
-let lib = ./lib/default
-
-let DSToken = ./abi/DSToken
-
-let DSGuard = ./abi/DSGuard
+let DSGuard = atd.abis.DSGuard
 
 let plan
       = DSToken.create/bytes32
-          (backend.hexToBytes32 (backend.asciiToHex "MyToken"))
-          (λ(token : types.address)
+          (atd.hexToBytes32 (atd.asciiToHex "MyToken"))
+          (λ(token : DSToken.Type)
 
       → DSGuard.create
-          (λ(guard : types.address)
+          (λ(guard : DSGuard.Type)
 
-      → lib.Plan/run
-            [ DSToken.send/setAuthority/address token guard
-            , (types.address/output "TOKEN" token)
-            , (types.address/output "GUARD" guard)
+      → atd.Plan/run
+            [ token.send/setAuthority/address guard.address
+            , (atd.address/output "TOKEN" token.address)
+            , (atd.address/output "GUARD" guard.address)
             ]
       ))
-in backend.render (lib.Plan/deploy plan)
+in atd.render (atd.Plan/deploy plan)
 EOF
+```
+
+### High level CLI
+
+See `example` directory.
+
+Print CLI usage:
+
+```sh
+atd
 ```

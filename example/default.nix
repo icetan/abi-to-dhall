@@ -1,4 +1,5 @@
 { pkgs ? (import ../pkgs.nix).pkgs
+, backend ? "sh"
 }:
 
 let
@@ -6,14 +7,8 @@ let
   solidityPackages = builtins.attrValues
     (pkgs.callPackage ./dapp2.nix {}).deps;
 
-  runner = buildAbiToDhall {
-    inherit solidityPackages;
-    name = "atd-example";
-  };
-in {
-  inherit runner;
-  inherit (runner) linker;
-  bundle = runner.bundle {
-    src = pkgs.lib.sourceByRegex ./. [ ".*\.dhall" ];
-  };
+in buildAbiToDhall {
+  inherit solidityPackages backend;
+  name = "example";
+  src = pkgs.lib.sourceByRegex ./. [ ".*\.dhall" ];
 }

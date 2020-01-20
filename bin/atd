@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+BIN_PATH=$(cd "${0%/*}" && pwd)
+
+usage() {
+  if [ "$1" ]; then echo >&2 "Error: $1"; fi
+  echo >&2 "
+Usage: atd
+          init  [--backend BACKEND] [ABI_DIR]
+          run   ([--file FILE] | [--expr EXPR] | [-- EXPR..])
+          print ([--file FILE] | [--expr EXPR] | [-- EXPR..])
+
+Command \`init\`:
+          Create './atd' directory
+
+  Options:
+    -b,--backend BACKEND
+          Select a generator backend: 'sh' or 'json' (Default: 'sh')
+
+  Arguments:
+    ABI_DIR
+          Path to a directory containing ABI files
+
+Commands:
+  run     Execute a deployment plan (only for 'sh' backend)
+  print   Print deployment plan to STDOUT
+
+  Options:
+    -f,--file FILE
+          A Dhall file to as deploy config
+    -e,--expr DHALL_EXPRESSION
+          A Dhall expression to evaluate as deploy config
+    -- DHALL_EXPRESSION..
+          Use rest of arguments as a Dhall expression (similar to --expr)
+
+Global environment:
+  DAPP_OUT
+          Dapp output directory to look for '*.abi' and '*.bin' solidity files
+"
+  exit 1
+}
+
+setExpr() {
+  [ ! "$expression" ] \
+    || usage "Arguments --file, --expr and -- are mutually exclusive."
+  expression="$1"
+}
+
+init() {
+  local backend=sh
+
+  while [ "$1" ]; do
+    case "$1" in
+      -b|--backend) shift
+        backend="$1"
+        ;;
+      -*)
+        usage "\"$1\" is not a recognized option."
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+  done
+
+  local abiDir="${1:-$DAPP_OUT}"
+  if [ "$abiDir" ]; then
+    rm -rf ./atd
+    "$BIN_PATH"/abi-to-dhall "$backend" "$abiDir"/*.abi
+  else
+    usage "Not creating './atd' directory because no argument or \$DAPP_OUT given."
+  fi
+}
+
+print() {
+  while [ "$1" ]; do
+    case "$1" in
+      -f|--file) shift
+        [ -f "$1" ] || usage "\"$1\" is not a file."
+        setExpr "$(realpath "$1")"
+        ;;
+      -e|--expr) shift
+        setExpr "$1"
+        ;;
+      --) shift
+        setExpr "$*"
+        break
+        ;;
+      *)
+        usage "\"$1\" is not a recognized argument."
+        ;;
+    esac
+    shift
+  done
+
+  [ "$expression" ] || usage "No Dhall expression or file given."
+  [ -d ./atd ] || usage "No './atd' directory found try the \`init\` command."
+
+  dhall text <<<"(./atd/package).render ($expression)"
+}
+
+run() {
+  [[ $(cat ./atd/.backend) == "\"sh\"" ]] \
+    || usage "\`run\` is only compatible with 'sh' backend."
+  export DAPP_OUT="${DAPP_OUT:-$PWD/atd/dapp}"
+  export DAPP_SKIP_BUILD=yes
+  print "$@" | exec bash
+}
+
+case "$1" in
+  init|run|print)
+    $1 "${@:2}"
+    ;;
+  *)
+    usage "\"$1\" is not a command."
+    ;;
+esac

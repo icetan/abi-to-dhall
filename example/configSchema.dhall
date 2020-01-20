@@ -70,9 +70,9 @@ let token =
 --       }
 --     },
 
-in  { mcdGov : atd.address
-    , mcdFlop: atd.address
-    , mcdFlap: atd.address
+in  { mcdGov : Text
+    , mcdFlop: Text
+    , mcdFlap: Text
     , DEPLOY_RESTRICTED_FAUCET : Bool
-    , proxyRegistry : Optional atd.address
+    , proxyRegistry : Optional Text
     }

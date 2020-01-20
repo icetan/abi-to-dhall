@@ -168,8 +168,8 @@ let toLiteral
 
 let toListLiteral
     : Text → Text
-    =   λ(val : Text)
-      → "\\\"\${${val}}\\\""
+    =   λ(expr : Text)
+      → "[ \${./Prelude/Text/concatMapSep \", \" Text (λ(x : Text) → \"\\\"\${x}\\\"\") (${expr})} ]"
 
 let backend : schema.Backend =
    { util =

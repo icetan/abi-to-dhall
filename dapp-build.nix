@@ -15,6 +15,9 @@ in
 
 overrideOverrideAttrs (
 { name
+, src
+, backend ? "sh"
+, deps ? []
 , solidityPackages ? []
 , passthru ? {}
 , ... } @ args:
@@ -22,7 +25,7 @@ overrideOverrideAttrs (
 let
   bins = [ seth ethsign dapp coreutils gnugrep gnused ];
 
-  abiToDhallMerged = runCommand "${name}-abi-to-dhall-deploy"
+  abiToDhallMerged = runCommand "${name}-abi-to-dhall-${backend}"
     { nativeBuildInputs = [ abi-to-dhall findutils ]; }
     ''
     echo >&2 Building Dhall files from ABIs
@@ -33,60 +36,74 @@ let
           (map (x: "${x}/dapp/*/out") solidityPackages)
       } -maxdepth 1 -type f -exec ln -sf -t $out/dapp-out {} \;
 
-    mkdir -p $out/abi-to-dhall
-    abi-to-dhall deploy $out/dapp-out/*.abi 2> stderr.log \
+    abi-to-dhall ${backend} $out/dapp-out/*.abi 2> stderr.log \
       || { cat stderr.log; exit 1; }
+
+    mkdir -p ./atd/deps
+    ${
+      builtins.concatStringsSep
+        "\n"
+        (map
+          (dep:
+            let dep' = dep.overrideAttrs (_: { inherit backend; });
+            in "ln -s \"${dep'}/abi-to-dhall\" ./atd/deps/${dep'.name}")
+          deps)
+    }
+
+    mkdir -p $out/abi-to-dhall
     mv -t $out/abi-to-dhall ./atd
     '';
 
-  linker = writeScriptBin "${name}-linker" ''
-    #!${bash}/bin/bash
-    exec ln -sfv -t . ${abiToDhallMerged}/abi-to-dhall/atd
-  '';
+#  bundle = stdenv.mkDerivation {
+#    inherit src;
+#    name = "${name}-bundle";
+#
+#    nativeBuildInputs = [ makeWrapper dhall-haskell ];
+#    buildInputs = bins;
+#
+#    BIN_PATH = lib.makeBinPath bins;
+#    DAPP_OUT = "${abiToDhallMerged}/dapp-out";
+#    DAPP_SKIP_BUILD = "yes";
+#
+#    buildPhase = ''
+#      ln -sf -t . ${abiToDhallMerged}/abi-to-dhall/*
+#      dhall text <<<"./main.dhall ./config.dhall" > deploy.sh
+#      chmod +x deploy.sh
+#    '';
+#
+#    installPhase = ''
+#      mkdir -p $out/bin
+#      cp deploy.sh $out/bin/${name}
+#      wrapProgram $out/bin/${name} \
+#        --argv0 "${name}" \
+#        --set PATH "$BIN_PATH" \
+#        --set DAPP_OUT "$DAPP_OUT" \
+#        --set DAPP_SKIP_BUILD "$DAPP_SKIP_BUILD"
+#    '';
+#
+#    checkPhase = ''
+#      ${shellcheck}/bin/shellcheck -x $out/bin/*
+#    '';
+#  };
 
-  bundle = { src }: stdenv.mkDerivation {
+  runner = stdenv.mkDerivation {
     inherit src;
-    name = "${name}-bundle";
-
+    name = "${name}-atd";
     nativeBuildInputs = [ makeWrapper dhall-haskell ];
-    buildInputs = bins;
 
-    BIN_PATH = lib.makeBinPath bins;
-    DAPP_OUT = "${abiToDhallMerged}/dapp-out";
-    DAPP_SKIP_BUILD = "yes";
-
-    buildPhase = ''
-      ln -sf -t . ${abiToDhallMerged}/abi-to-dhall/*
-      dhall text <<<"./main.dhall ./config.dhall" > deploy.sh
-      chmod +x deploy.sh
-    '';
+    ATD_MERGE = "${abiToDhallMerged}";
 
     installPhase = ''
-      mkdir -p $out/bin
-      cp deploy.sh $out/bin/${name}
-      wrapProgram $out/bin/${name} \
-        --argv0 "${name}" \
-        --set PATH "$BIN_PATH" \
-        --set DAPP_OUT "$DAPP_OUT" \
-        --set DAPP_SKIP_BUILD "$DAPP_SKIP_BUILD"
+      mkdir -p $out/abi-to-dhall/deps
+      cp -r -t $out/abi-to-dhall ./*
+      ln -s "$ATD_MERGE/dapp-out" $out/dapp-out
+      ln -s "$ATD_MERGE/abi-to-dhall/atd" $out/abi-to-dhall/atd
+      makeWrapper ${abi-to-dhall}/bin/atd $out/bin/${name}-atd \
+        --run "rm -rf ./atd; ln -sfT $out/abi-to-dhall/atd ./atd"
     '';
 
-    checkPhase = ''
-      ${shellcheck}/bin/shellcheck -x $out/bin/*
-    '';
+    passthru = {
+      inherit solidityPackages backend; # bundle;
+    } // passthru;
   };
-
-  runner = runCommand "${name}-runner" {
-      DAPP_OUT = "${abiToDhallMerged}/dapp-out";
-
-      buildInputs = [ makeWrapper ];
-      passthru = {
-        inherit solidityPackages bundle linker;
-      } // passthru;
-    } ''
-      makeWrapper ${abi-to-dhall}/bin/dhall-runner $out/bin/${name}-runner \
-        --argv0 "${name}-runner" \
-        --set DAPP_OUT "$DAPP_OUT" \
-        --set ATD_PATH "${abiToDhallMerged}/abi-to-dhall/atd"
-    '';
 in runner // (removeAttrs args [ "solidityPackages" "passthru" ]))

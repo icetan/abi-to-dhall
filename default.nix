@@ -53,8 +53,9 @@
 
       ln -sf ${dhall-prelude} ./dhall/Prelude
       dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall
-      dhall <<<"./dhall/backends/deploy.dhall" > $out/dhall/backends/deploy.dhall
-      dhall <<<"./dhall/backends/json.dhall" > $out/dhall/backends/json.dhall
+      for backend in ./dhall/backends/*.dhall; do
+        dhall <<<"$backend" > $out/dhall/backends/''${backend##*/}
+      done
 
       cp -r ./bin $out/bin
       wrapProgram $out/bin/abi-to-dhall \
@@ -62,7 +63,7 @@
         --set LIB_DIR $out/dhall \
         --set PRELUDE_PATH ${dhall-prelude}
 
-      wrapProgram $out/bin/dhall-runner \
+      wrapProgram $out/bin/atd \
         --set PATH ${runnerBinPaths}
     '';
     passthru = {
