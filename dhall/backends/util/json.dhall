@@ -1,6 +1,6 @@
-let Text/concatMapSep =
-        ../../Prelude/Text/concatMapSep
-      ? https://prelude.dhall-lang.org/Text/concatMapSep
+let Text/concatMapSep = ../../Prelude/Text/concatMapSep
+
+let Text/concatSep = ../../Prelude/Text/concatSep
 
 let List/map = ../../Prelude/List/map
 
@@ -23,12 +23,12 @@ let insertSort = utils.insertSort
 let def : Void → Def = λ(void : Void) → void.def
 
 let undef
-    : Def → Text
+    : Def → List Text
     =   λ(def : Def)
-      → Text/concatMapSep
-          ",\n"
+      → List/map
           DefEntry
-          (λ(e : DefEntry) → "{ \"id\": \"${Natural/show e.mapKey}\", \"def\": ${e.mapValue} }")
+          Text
+          (λ(e : DefEntry) → "{ \"op\": \"def\", \"id\": \"${Natural/show e.mapKey}\", \"def\": ${e.mapValue} }")
           def
 
 let void : Void → Text = λ(void : Void) → void.void
@@ -80,11 +80,13 @@ let toJSON
             "generator": "abi-to-dhall"
           },
           "version": 1,
-          "defs": [
-            ${undef (insertSort (concatDefs (List/map Void Def def vs)))}
-          ],
-          "ast": [
-            ${Text/concatMapSep ",\n" Void void vs}
+          "ops": [
+            ${Text/concatSep
+                ",\n"
+                ( (undef (insertSort (concatDefs (List/map Void Def def vs))))
+                # (List/map Void Text void vs)
+                )
+            }
           ]
         }
         ''

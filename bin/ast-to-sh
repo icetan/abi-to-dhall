@@ -23,13 +23,15 @@ function quiet(sh) {
 
 function op(node) {
   const parse =
-    { send: n => `seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
+    { def: n => `_def_${n.id}=$(${op(n.def)})`
+    , send: n => `seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , call: n => `seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
     , create: n => `dapp create ${n.contract} ${args(n.args)}`
     , callDef: n => `\${_def_${n.callDef}}`
     , output: n => quiet(`echo "$_sep \\"${n.id}\\": \\"${op(n.value)}\\"";_sep=,`)
     , lit: n => n.value
     , naturalToUint256: n => `$(seth --to-uint256 "${n.naturalToUint256}")`
+    , integerToInt256: n => `$(seth --to-int256 "${n.integerToInt256}")`
     , hexToBytes32: n => `$(seth --to-bytes32 "${op(n.hexToBytes32)}")`
     , asciiToHex: n => `$(seth --from-ascii "${n.asciiToHex}")`
     , sig: n => `$(seth sig "${n.sig}")`
@@ -41,13 +43,8 @@ function op(node) {
   return parse[node.op](node)
 }
 
-function def(node) {
-  return `_def_${node.id}=$(${op(node.def)})`
-}
-
 function ast(node) {
-  const defs = node.defs.map(def)
-  const ops = node.ast.map(op)
+  const ops = node.ops.map(op)
   return `#!/usr/bin/env bash
 echo -n "{";
 trap 'exit 130' INT
@@ -59,8 +56,6 @@ trap '{ echo "$_sep \\"meta\\":
   }
 }"; } 2>/dev/null' EXIT
 set -ex
-
-${defs.join("\n")}
 
 ${ops.join("\n")}`
 }
