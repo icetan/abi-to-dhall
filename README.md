@@ -78,8 +78,9 @@ script that does a deployment:
 abi-to-dhall out/abi/{DSToken,DSGuard}.abi
 ```
 
-Import the generated Dhall code and render a `Plan`. All generated Dhall code is
-written to `./adt` and can be imported through the `./adt/package` file.
+Import the generated Dhall DSL code and render a `Plan`. All generated
+Dhall code is written to `./atd` and can be imported through the `./atd/package`
+file.
 
 ```sh
 dhall <<EOF
