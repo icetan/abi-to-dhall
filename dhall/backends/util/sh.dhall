@@ -86,8 +86,10 @@ let toBash
     =   λ(vs : List Void)
       → ''
         #!/usr/bin/env bash
-        set -ex
+        echo -n "{"; trap 'trap - EXIT; echo "}"' EXIT
         
+        set -ex
+
         # Definitions
         ${undef (insertSort (concatDefs (List/map Void Def def vs)))}
         

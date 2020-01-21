@@ -1,14 +1,62 @@
-# abi-to-dhall
+ # abi-to-dhall
 
-Generate Dhall functions from Solidity ABI files
+Generate a Dhall based DSL for deploying Ethereum contracts.
 
 ## Why
 
 I wanted a type safe way of generating scripts and other off-chain data that
 interacts or relates to Ethereum smart contracts.
 
-The main use case being deployment scripts. How to make sure that the right
-types are passed to a smart contract function call.
+The main use case being deployment. How to make sure that the right types
+are passed to a smart contract function call.
+
+## How
+
+<!--[graph-easy --boxart
+graph { flow: down }
+[Contract ABIs]
+-> [abi-to-dhall]
+-> [Dhall DSL]
+-> [JSON AST]
+-> [Runtime]
+-> [Deploy Output]
+[Dhall Deploy Code] -> [Dhall DSL]
+]-->
+                              ┌───────────────┐
+                              │ Contract ABIs │
+                              └───────────────┘
+                                │
+                                │
+                                ∨
+                              ┌───────────────┐
+                              │ abi-to-dhall  │
+                              └───────────────┘
+                                │
+                                │
+                                ∨
+    ┌───────────────────┐     ┌───────────────┐
+    │ Dhall Deploy Code │ ──> │   Dhall DSL   │
+    └───────────────────┘     └───────────────┘
+                                │
+                                │
+                                ∨
+                              ┌───────────────┐
+                              │   JSON AST    │
+                              └───────────────┘
+                                │
+                                │
+                                ∨
+                              ┌───────────────┐
+                              │    Runtime    │
+                              └───────────────┘
+                                │
+                                │
+                                ∨
+                              ┌───────────────┐
+                              │ Deploy Output │
+                              └───────────────┘
+
+
 
 ## Install
 
@@ -27,7 +75,7 @@ In this case we use the `deploy` backend which will be able to generate a bash
 script that does a deployment:
 
 ```sh
-abi-to-dhall sh out/abi/{DSToken,DSGuard}.abi
+abi-to-dhall out/abi/{DSToken,DSGuard}.abi
 ```
 
 Import the generated Dhall code and render a `Plan`. All generated Dhall code is
@@ -68,3 +116,19 @@ Print CLI usage:
 ```sh
 atd
 ```
+
+## Semantics
+
+### Void
+
+### Run
+
+### Plan
+
+### Module
+
+### Deploy
+
+## EVM Types
+
+

@@ -38,7 +38,7 @@ let obj
     =   λ(id : Text)
       → λ(code : Text)
       → ''
-        { "op": "${id}", "val": ${code} }
+        { "op": "${id}", "${id}": ${code} }
         ''
 
 let defineMem
@@ -51,7 +51,7 @@ let defineMem
           }
         ]
 
-let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "{ \"defId\" : \"${Natural/show id}\" }"
+let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "\"${Natural/show id}\""
 
 let hexToBytes32
     : Hex → { bytes32 : Text, def : Def }
@@ -76,6 +76,10 @@ let toJSON
     =   λ(vs : List Void)
       → ''
         {
+          "meta": {
+            "generator": "abi-to-dhall"
+          },
+          "version": 1,
           "defs": [
             ${undef (insertSort (concatDefs (List/map Void Def def vs)))}
           ],

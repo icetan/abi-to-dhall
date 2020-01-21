@@ -9,19 +9,24 @@ nix-build
 ## Run
 
 ```sh
-result/bin/abi-to-dhall-example
+result/bin/example-atd print -- ./main.dhall ./config.dhall
 ```
 
-## Edit
+## Structure
+
+`modules.dhall`
+
+A collection of deployment plans that can be reused.
 
 `main.dhall`
 
-The entrypoint script.
-
-`configSchema.dhall`
-
-The schema defining the structure of `config.dhall`.
+Entry point for renderer.
 
 `config.dhall`
 
-The config values to be compiled with `main.dhall`.
+The config values that should be passed to `./main.dhall`.
+
+`configSchema.dhall`
+
+Schema describing config shape.
+

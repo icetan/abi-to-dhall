@@ -16,7 +16,6 @@ in
 overrideOverrideAttrs (
 { name
 , src
-, backend ? "sh"
 , deps ? []
 , solidityPackages ? []
 , passthru ? {}
@@ -25,7 +24,7 @@ overrideOverrideAttrs (
 let
   bins = [ seth ethsign dapp coreutils gnugrep gnused ];
 
-  abiToDhallMerged = runCommand "${name}-abi-to-dhall-${backend}"
+  abiToDhallMerged = runCommand "${name}-abi-to-dhall"
     { nativeBuildInputs = [ abi-to-dhall findutils ]; }
     ''
     echo >&2 Building Dhall files from ABIs
@@ -36,7 +35,7 @@ let
           (map (x: "${x}/dapp/*/out") solidityPackages)
       } -maxdepth 1 -type f -exec ln -sf -t $out/dapp-out {} \;
 
-    abi-to-dhall ${backend} $out/dapp-out/*.abi 2> stderr.log \
+    abi-to-dhall $out/dapp-out/*.abi 2> stderr.log \
       || { cat stderr.log; exit 1; }
 
     mkdir -p ./atd/deps
@@ -44,9 +43,7 @@ let
       builtins.concatStringsSep
         "\n"
         (map
-          (dep:
-            let dep' = dep.overrideAttrs (_: { inherit backend; });
-            in "ln -s \"${dep'}/abi-to-dhall\" ./atd/deps/${dep'.name}")
+          (dep: "ln -s \"${dep}/abi-to-dhall\" ./atd/deps/${dep.name}")
           deps)
     }
 
@@ -103,7 +100,7 @@ let
     '';
 
     passthru = {
-      inherit solidityPackages backend; # bundle;
+      inherit solidityPackages; # bundle;
     } // passthru;
   };
 in runner // (removeAttrs args [ "solidityPackages" "passthru" ]))

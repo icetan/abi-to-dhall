@@ -96,12 +96,10 @@ let sendValue =
         ${"''"}
         {
           "op": "send",
-          "val": {
-            "address": ''${address.address},
-            "function": "${fun.name}",
-            "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
-            "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
-          }
+          "address": ''${address.address},
+          "function": "${fun.name}",
+          "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
+          "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
         }
         ${"''"}
         ''
@@ -124,13 +122,11 @@ let callDef =
             (backend.defineMem tag ${"''"}
             {
               "op": "call",
-              "val": {
-                "address": ''${address.address},
-                "function": "${fun.name}",
-                "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
-                "args":     [ ${funArgsToDhallFunValue fun.inputs} ],
-                "outputTypes":  [ ${funArgsToDhallCall fun.outputs} ]
-              }
+              "address": ''${address.address},
+              "function": "${fun.name}",
+              "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
+              "args":     [ ${funArgsToDhallFunValue fun.inputs} ],
+              "outputTypes":  [ ${funArgsToDhallCall fun.outputs} ]
             }
             ${"''"})''
           ]
@@ -147,11 +143,9 @@ let createDef =
             (backend.defineMem tag ${"''"}
             {
               "op": "create",
-              "val": {
-                "contract": "${"\${name}"}",
-                "argTypes": [ ${funArgsToDhallCall constructor.inputs} ],
-                "args": [ ${funArgsToDhallFunValue constructor.inputs} ]
-              }
+              "contract": "${"\${name}"}",
+              "argTypes": [ ${funArgsToDhallCall constructor.inputs} ],
+              "args": [ ${funArgsToDhallFunValue constructor.inputs} ]
             }
             ${"''"})''
           ]
@@ -159,12 +153,12 @@ let createDef =
 let toOutput
     : Text → Text
     =   λ(val : Text)
-      → "{ \\\"op\\\": \\\"output\\\", \\\"val\\\": { \\\"id\\\": \\\"\${id}\\\", \\\"value\\\": \${${val}} } }"
+      → "{ \\\"op\\\": \\\"output\\\", \\\"id\\\": \\\"\${id}\\\", \\\"value\\\": \${${val}} }"
 
 let toLiteral
     : Text → Text
     =   λ(val : Text)
-      → "\\\"\${${val}}\\\""
+      → "{ \\\"op\\\": \\\"lit\\\", \\\"value\\\": \\\"\${${val}}\\\" }"
 
 let toListLiteral
     : Text → Text

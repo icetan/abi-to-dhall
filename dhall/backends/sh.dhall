@@ -80,7 +80,11 @@ let funArgsToDhallArgNames
           (λ(iarg : SimpleIArg) → "arg${Natural/show iarg.index}")
           (List/indexed SimpleArg (toSimpleArgs args))
 
-let toOutput : Text → Text = λ(expr : Text) → "echo \\\"\${id}=\${${expr}}\\\""
+let toOutput
+    : Text → Text
+    =   λ(expr : Text)
+      → ''
+        echo \"$_sep \\\"''${id}\\\": \\\"''${${expr}}\\\"\";_sep=,''
 
 let toLiteral : Text → Text = λ(expr : Text) → "\${${expr}}"
 

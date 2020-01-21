@@ -38,7 +38,9 @@
   }) + "/Prelude";
 
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused dhall-haskell ];
-  runnerBinPaths = with pkgs; lib.makeBinPath [ coreutils dhall-haskell bash seth ethsign dapp gnugrep gnused ];
+  runnerBinPaths = with pkgs; lib.makeBinPath [
+    coreutils dhall-haskell bash seth ethsign dapp gnugrep gnused
+  ];
 
   abi-to-dhall = pkgs.stdenv.mkDerivation {
     name = "abi-to-dhall";
@@ -47,6 +49,7 @@
       ".*dhall.*"
     ];
     nativeBuildInputs = with pkgs; [ makeWrapper dhall-haskell ];
+    buildInputs = with pkgs; [ nodejs jq ];
     buildPhase = "true";
     installPhase = ''
       mkdir -p $out/dhall/backends
@@ -65,6 +68,10 @@
 
       wrapProgram $out/bin/atd \
         --set PATH ${runnerBinPaths}
+
+      for astBin in $out/bin/ast-to-*; do
+        wrapProgram $astBin
+      done
     '';
     passthru = {
       buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit dhall-haskell abi-to-dhall; };
