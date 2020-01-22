@@ -8,8 +8,16 @@ nix-build
 
 ## Run
 
+Preview deployment AST:
+
 ```sh
-result/bin/example-atd print -- ./main.dhall ./config.dhall
+result/bin/example-atd ast -- ./main.dhall ./config.dhall
+```
+
+Deploy using `seth` runtime (you will need to install `dapptools` first):
+
+```sh
+result/bin/example-atd run seth -- ./main.dhall ./config.dhall
 ```
 
 ## Structure
