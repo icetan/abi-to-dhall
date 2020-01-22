@@ -1,4 +1,4 @@
-{ pkgs ? (import ./pkgs.nix).pkgs
+{ pkgs ? import <nixpkgs> {}
 }: let
   inherit (pkgs.lib) optionalString makeBinPath;
 
@@ -38,9 +38,7 @@
   }) + "/Prelude";
 
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused dhall-haskell ];
-  runnerBinPaths = with pkgs; lib.makeBinPath [
-    coreutils dhall-haskell bash seth ethsign dapp gnugrep gnused
-  ];
+  atdBinPaths = with pkgs; lib.makeBinPath [ coreutils gnused bash jq dhall-haskell ];
 
   abi-to-dhall = pkgs.stdenv.mkDerivation {
     name = "abi-to-dhall";
@@ -49,7 +47,7 @@
       ".*dhall.*"
     ];
     nativeBuildInputs = with pkgs; [ makeWrapper dhall-haskell ];
-    buildInputs = with pkgs; [ nodejs jq ];
+    buildInputs = with pkgs; [ nodejs ];
     buildPhase = "true";
     installPhase = ''
       mkdir -p $out/dhall/backends
@@ -67,14 +65,13 @@
         --set PRELUDE_PATH ${dhall-prelude}
 
       wrapProgram $out/bin/atd \
-        --set PATH ${runnerBinPaths}
+        --prefix PATH : ${atdBinPaths}
 
-      for astBin in $out/bin/ast-to-*; do
-        wrapProgram $astBin
-      done
+      wrapProgram $out/bin/atd-to-seth \
+        --prefix PATH : ${with pkgs; lib.makeBinPath [ bash ]}
     '';
     passthru = {
-      buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit dhall-haskell abi-to-dhall; };
+      buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit abi-to-dhall; };
     };
   };
 in abi-to-dhall

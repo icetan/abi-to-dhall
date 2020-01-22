@@ -143,6 +143,7 @@ let createDef =
             (backend.defineMem tag ${"''"}
             {
               "op": "create",
+              "prefix": "${"\${prefix}"}",
               "contract": "${"\${name}"}",
               "argTypes": [ ${funArgsToDhallCall constructor.inputs} ],
               "args": [ ${funArgsToDhallFunValue constructor.inputs} ]

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-
 const fs = require('fs')
-const data = fs.readFileSync(0, 'utf-8')
-const json = JSON.parse(data)
+const { spawn } = require('child_process');
 
 function error(msg) {
   console.error(`Error: ${msg}`)
@@ -26,7 +24,7 @@ function op(node) {
     { def: n => `_def_${n.id}=$(${op(n.def)})`
     , send: n => `seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , call: n => `seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
-    , create: n => `dapp create ${n.contract} ${args(n.args)}`
+    , create: n => `seth send --create "./atd/evm/${n.prefix}${n.contract}.bin"  "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , callDef: n => `\${_def_${n.callDef}}`
     , output: n => quiet(`echo "$_sep \\"${n.id}\\": \\"${op(n.value)}\\"";_sep=,`)
     , lit: n => n.value
@@ -50,7 +48,7 @@ echo -n "{";
 trap 'exit 130' INT
 trap 'exit 131' TERM
 trap '{ echo "$_sep \\"meta\\":
-  { \\"runtime\\": \\"atd-sh\\"
+  { \\"runtime\\": \\"atd-to-seth\\"
   , \\"exit\\": $?
   , \\"date\\": \\"$(date -u +"%FT%T.000Z")\\"
   }
@@ -60,4 +58,16 @@ set -ex
 ${ops.join("\n")}`
 }
 
-console.debug(ast(json))
+const action = process.argv[2]
+const data = fs.readFileSync(0, 'utf-8')
+const json = ast(JSON.parse(data))
+
+if (action === 'run') {
+  const child = spawn('bash')
+  child.stdout.pipe(process.stdout, { end: false });
+  child.stderr.pipe(process.stderr, { end: false });
+  child.stdin.write(json)
+  child.stdin.end();
+} else {
+  console.log(json)
+}

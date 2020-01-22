@@ -1,30 +1,56 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-BIN_PATH=$(cd "${0%/*}" && pwd)
+BIN_PATH=$(realpath "${0%/*}")
+PATH="$BIN_PATH:$PATH"
 
 usage() {
-  if [ "$1" ]; then echo >&2 "Error: $1"; fi
-  echo >&2 "
-Usage: atd
-          init  [ABI_DIR]
-          run   [--runtime RUNTIME] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          print [--runtime RUNTIME] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          ast   ([--file FILE] | [--expr EXPR] | [-- EXPR..])
+  if [[ -n $1 ]]; then echo >&2 "Error: $1"; fi
 
-Commands:
-  init    Create './atd' directory
-  run     Execute a deployment plan
-  print   Print deployment plan to STDOUT
-  ast     Print JSON AST to STDOUT (alias for \`atd print --runtime json ...\`)
+  # TODO: Fix "bash: compgen: command not found" when wrapped with nix.
+  runtimes=$(command -v compgen >/dev/null \
+    && echo "(available: $(compgen -c | sed -n 's/^atd-to-/, /p' | sort -u | tr -d '\n' | sed 's/^, //'))" \
+    || echo "(eg. seth)")
 
-Arguments:
-  ABI_DIR
-          Path to a directory containing ABI files
+  echo -n >&2 "
+Usage: atd"
+  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+          build [--prefix NAME] [ABI_BIN_DIR]
+          link  DEP_DIR"
+  echo -n >&2 "
+          ast           ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          print RUNTIME ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          run   RUNTIME ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
 
-Options:
-  -r,--runtime RUNTIME
-          Select a runtime 'sh' or 'json' ('sh' only available for \`run\`)
+Commands:"
+  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+  build   Create './atd' directory
+  link    Add another abi-to-dhall project as a dependency"
+  echo -n >&2 "
+  ast     Print AST to STDOUT
+  print   Print a runtimes deployment plan to STDOUT
+  run     Execute a runtime deployment
+
+Arguments:"
+  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+  ABI_BIN_DIR
+          Path to a directory containing ABI and BIN files
+  DEP_DIR
+          Path to a project directory containing a './atd' directory"
+  echo -n >&2 "
+  RUNTIME
+          Name of runtime to use ${runtimes}.
+
+          You can add your own runtimes by adding executables with the name
+          'atd-to-*' to your PATH. The program will be called and the AST will
+          be piped to its STDIN.
+
+Options:"
+  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+  --prefix NAME
+          Prefix shared ABI/BIN files for this build to avoid conflicts with
+          dependencies"
+  echo -n >&2 "
   -a,--ast FILE
           A deploy AST file to use instead of Dhall code
   -f,--file FILE
@@ -33,10 +59,6 @@ Options:
           A Dhall expression to evaluate as deploy config
   -- DHALL_EXPRESSION..
           Use rest of arguments as a Dhall expression (similar to --expr)
-
-Global environment:
-  DAPP_OUT
-          Dapp output directory to look for '*.abi' and '*.bin' solidity files
 "
   exit 1
 }
@@ -53,48 +75,67 @@ setAst() {
   astFile="$1"
 }
 
-init() {
-  while [ "$1" ]; do
+build() {
+  local abiDir
+  local prefix
+  while [[ -n $1 ]]; do
     case "$1" in
+      --prefix) shift
+        ATD_PREFIX="$1"
+        ;;
       -*)
         usage "\"$1\" is not a recognized option."
         ;;
       *)
+        abiDir="${1:-${ATD_ABI_DIR:-./out}}"
         break
         ;;
     esac
     shift
   done
 
-  local abiDir="${1:-$DAPP_OUT}"
-  if [ "$abiDir" ]; then
-    rm -rf ./atd
-    "$BIN_PATH"/abi-to-dhall "$abiDir"/*.abi
-  else
-    usage "Not creating './atd' directory because no argument or \$DAPP_OUT given."
-  fi
+  prefix="${ATD_PREFIX:-${PWD##*/}}"
+  prefix="${prefix// /-}"
+
+  [[ -d $abiDir ]] \
+    || usage "Not creating './atd' directory because no ABI/BIN directory given as argument."
+
+  rm -rf ./atd
+  "$BIN_PATH"/abi-to-dhall --prefix "$prefix" "$abiDir"/*.abi
 }
 
-parseArgs() {
-  while [ "$1" ]; do
+link() {
+  local depDir
+  while [[ -n $1 ]]; do
     case "$1" in
-      -r|--runtime) shift
-        case "$1" in
-          sh|json)
-            [[ -z $runtime ]] || usage "--runtime option given more than once."
-            runtime="$1"
-            ;;
-          *)
-            usage "\"$1\" is not a valid runtime, available runtimes: 'sh' or 'json'"
-            ;;
-        esac
+      -*)
+        usage "\"$1\" is not a recognized option."
         ;;
+      *)
+        depDir="$1"
+        break
+        ;;
+    esac
+    shift
+  done
+
+  [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command."
+  [[ -d $depDir ]] || usage "No dependency path given."
+  [[ -d "$depDir/atd" ]] || usage "No './atd' directory found in dependency path."
+
+  ln -sfv -t ./atd/deps "$depDir"
+  ln -sfv -t ./atd/evm "$depDir"/atd/evm/*
+}
+
+astArgs() {
+  while [[ -n $1 ]]; do
+    case "$1" in
       -a|--ast) shift
-        [ -f "$1" ] || usage "\"$1\" is not a file."
+        [[ -f $1 ]] || usage "\"$1\" is not a file."
         setAst "$1"
         ;;
       -f|--file) shift
-        [ -f "$1" ] || usage "\"$1\" is not a file."
+        [[ -f $1 ]] || usage "\"$1\" is not a file."
         setExpr "$(realpath "$1")"
         ;;
       -e|--expr) shift
@@ -111,40 +152,58 @@ parseArgs() {
     shift
   done
 
-  runtime="${runtime:-sh}"
-}
+  [[ -z $astFile ]] || return 0
 
-print() {
-  parseArgs "$@"
-
-  if [ "$astFile" ]; then
-    "$BIN_PATH/ast-to-$runtime" < "$astFile"
-  else
-    [ "$expression" ] || usage "No Dhall expression or file given."
-    [ -d ./atd ] || usage "No './atd' directory found try the \`init\` command."
-    [[ $(cat ./atd/.backend) == "\"json\"" ]] \
-      || usage "$(cat ./atd/.backend) is not a compatible backend, only 'json' is supported."
-
-    dhall text <<<"(./atd/package).render ($expression)" | "$BIN_PATH/ast-to-$runtime"
-  fi
-}
-
-run() {
-  parseArgs "$@"
-
-  [[ $runtime == sh ]] \
-    || usage "\`run\` is only compatible with 'sh' runtime for now."
-  export DAPP_OUT="${DAPP_OUT:-$PWD/atd/dapp}"
-  export DAPP_SKIP_BUILD=yes
-  print | exec bash
+  [[ -n $expression ]] || usage "No Dhall expression or file given."
+  [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command."
+  [[ $(cat ./atd/.backend) == "\"json\"" ]] \
+    || usage "$(cat ./atd/.backend) is not a compatible backend, only 'json' is supported."
 }
 
 ast() {
-  print --runtime json "$@"
+  astArgs "$@"
+
+  if [[ -n $astFile ]]; then
+    [[ -f $astFile ]] || usage "'$astFile' is not a file"
+    jq . "$astFile"
+  else
+    dhall text <<<"(./atd/package).render ($expression)" | jq .
+  fi
+}
+
+plugin() {
+  local name="${1:-seth}"
+  local action="$2"
+  local cmd="atd-to-$name"
+  [[ ! $name =~ ^- ]] \
+    || usage "'$name' not a valid runtime name."
+  command -v "$cmd" >/dev/null \
+    || usage "Runtime '$name' not available, please make '$cmd' available in your PATH."
+
+  astArgs "${@:3}"
+  ast | exec $cmd "$action"
+}
+
+print() {
+  plugin "$1" print "${@:2}"
+}
+
+run() {
+  plugin "$1" run "${@:2}"
 }
 
 case "$1" in
-  init|run|print|ast)
+  build|link)
+    [[ -z $ATD_PREBUILT ]] \
+      || usage "Command not available when using pre-built './atd'."
+    $1 "${@:2}"
+    ;;
+  ast|print|run)
+    if [[ -n $ATD_PREBUILT ]]; then
+      [[ ! -e ./atd || $(realpath ./atd) == $(realpath "$ATD_PREBUILT") ]] \
+        || usage "Using pre-built dependencies, remove existing './atd' first."
+      ln -sfT "$ATD_PREBUILT" ./atd
+    fi
     $1 "${@:2}"
     ;;
   *)

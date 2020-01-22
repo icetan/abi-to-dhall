@@ -244,8 +244,9 @@ let abiOpToDhall
           op
 
 let abiToDhall
-    : schema.Backend → Text → schema.Abi → Text
+    : schema.Backend → Text → Text → schema.Abi → Text
     =   λ(backend : schema.Backend)
+      → λ(prefix : Text)
       → λ(name : Text)
       → λ(ops : schema.Abi)
       → ''
@@ -264,6 +265,8 @@ let abiToDhall
         let Plan = lib.Plan
 
         let backend = ../backend
+
+        let prefix = "${prefix}"
 
         let name = "${name}"
 
