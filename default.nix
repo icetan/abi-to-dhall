@@ -50,7 +50,8 @@
     buildInputs = with pkgs; [ nodejs ];
     buildPhase = "true";
     installPhase = ''
-      mkdir -p $out/dhall/backends
+      export XDG_CACHE_HOME="$PWD/.cache"
+      mkdir -p $out/dhall/backends "XDG_CACHE_HOME"
 
       ln -sf ${dhall-prelude} ./dhall/Prelude
       dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall

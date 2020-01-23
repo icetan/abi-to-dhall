@@ -21,7 +21,11 @@ let FunArg = schema.FunArg
 
 let SimpleArg = schema.SimpleArg
 
+let SimpleArgV2 = schema.SimpleArgV2
+
 let ComplexArg = schema.ComplexArg
+
+let ComplexArgV2 = schema.ComplexArgV2
 
 let SimpleIArg = { index : Natural, value : SimpleArg }
 
@@ -56,7 +60,9 @@ let toSimpleArg
     =   λ(arg : FunArg)
       → merge
           { Simple = λ(arg : SimpleArg) → arg.{ name, type }
+          , SimpleV2 = λ(arg : SimpleArgV2) → arg.{ name, type }
           , Complex = λ(arg : ComplexArg) → arg.{ name, type }
+          , ComplexV2 = λ(arg : ComplexArgV2) → arg.{ name, type }
           }
           arg
 

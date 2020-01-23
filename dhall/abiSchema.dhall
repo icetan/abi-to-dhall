@@ -1,10 +1,25 @@
 let SimpleArg = { name : Text, type : Text }
 
+let SimpleArgV2 =
+      SimpleArg ⩓ { internalType : Text }
+
 let ComplexArg = SimpleArg ⩓ { components : List SimpleArg }
 
-let FunArg = < Simple : SimpleArg | Complex : ComplexArg >
+let ComplexArgV2 =
+      ComplexArg ⩓ { internalType : Text }
 
-let EvArg = { indexed : Bool, name : Text, type : Text }
+let FunArg =
+      < Simple : SimpleArg
+      | Complex : ComplexArg
+      | SimpleV2 : SimpleArgV2
+      | ComplexV2 : ComplexArgV2
+      >
+
+let EvArg = { indexed : Bool, name : Text, type : Text, internalType : Optional Text }
+
+-- TODO: Make EvArg into a Union of EvArg | EvArgV2 instead of using Optional fields
+--let EvArgV2 = EvArg ⩓ { internalType : Text }
+--let EventArg = < Arg : EvArg | ArgV2 : EvArgV2 >
 
 let Fun =
       { constant : Bool
@@ -36,13 +51,21 @@ let Op =
 
 let Abi = List Op
 
-let DefEntry : Type = { mapKey : Natural, mapValue : Text }
+let DefEntry
+    : Type
+    = { mapKey : Natural, mapValue : Text }
 
-let Def : Type = List DefEntry
+let Def
+    : Type
+    = List DefEntry
 
-let Hex : Type = { hex : Text, def : Def }
+let Hex
+    : Type
+    = { hex : Text, def : Def }
 
-let Void : Type = { void : Text, def : Def }
+let Void
+    : Type
+    = { void : Text, def : Def }
 
 let BackendUtil
     : Type
@@ -80,7 +103,9 @@ in  { Abi = Abi
     , FunArg = FunArg
     , EvArg = EvArg
     , SimpleArg = SimpleArg
+    , SimpleArgV2 = SimpleArgV2
     , ComplexArg = ComplexArg
+    , ComplexArgV2 = ComplexArgV2
     , BackendUtil = BackendUtil
     , Backend = Backend
     , Hex = Hex

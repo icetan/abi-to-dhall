@@ -24,15 +24,17 @@ let
     { nativeBuildInputs = [ abi-to-dhall findutils ]; }
     ''
     echo >&2 Building Dhall files from ABIs
-    mkdir -p $out/dapp-out
+
+    export XDG_CACHE_HOME="$PWD/.cache"
+    mkdir -p $out/dapp-out "XDG_CACHE_HOME"
+
     find ${
       builtins.concatStringsSep
         " "
         (map (x: "${x}/dapp/*/out") solidityPackages)
     } -maxdepth 1 -type f -exec ln -sf -t $out/dapp-out {} \;
 
-    abi-to-dhall --prefix "${name}" $out/dapp-out/*.abi 2> stderr.log \
-      || { cat stderr.log; exit 1; }
+    abi-to-dhall --prefix "${name}" $out/dapp-out/*.abi
 
     mkdir -p ./atd/deps
     ${

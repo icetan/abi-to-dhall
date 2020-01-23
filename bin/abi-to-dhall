@@ -37,8 +37,8 @@ gen() {
   echo -n >&2 "$abiPath -> "
 
   if {
-    sed 's/\[\]"/_list"/g' "$abiPath" \
-      | json-to-dhall --records-strict --unions-strict "($PACKAGE_PATH).abiSchema.Abi" \
+    sed 's/\[[0-9]*\]"/_list"/g' "$abiPath" \
+      | json-to-dhall --records-strict --unions-first "($PACKAGE_PATH).abiSchema.Abi" \
       > "$abiDhall" \
     && dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$ATD_PREFIX\" \"$contractName\" $abiDhall" \
       | dhall format > "$OUT_ABI_DIR/$contractName"
@@ -51,7 +51,7 @@ gen() {
     echo "$contractName"
   else
     echo >&2 "Failed!"
-    exit 1
+    exit 2
   fi
 }
 
@@ -66,13 +66,19 @@ main() {
 
   echo "\"${BACKEND_NAME}\"" > "$OUT_LIB_DIR/.backend"
 
-  local contracts=$(for fn in "$@"; do gen "$fn"; done) || exit $?
+  local sep
+  local contract
+  local contracts
+  for fn in "$@"; do
+    contract=$(gen "$fn")
+    [[ -n $contract ]] || exit 2
+    contracts+="$sep $contract = ./abi/$contract"
+    sep=,
+  done
 
   dhall format <<<"
     { Prelude = ./Prelude/package.dhall
-    , abis =
-      {$(sed 's|\(.*\)|,\1 = ./abi/\1|;1s/,//' <<<"$contracts")
-      }
+    , abis = { $contracts }
     } ⫽ ./lib ⫽ ./backend ⫽ ./types
   " > "$OUT_LIB_DIR/package"
 }
