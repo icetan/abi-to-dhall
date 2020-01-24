@@ -18,9 +18,9 @@ Usage: atd"
           build [--prefix NAME] [ABI_BIN_DIR]
           link  DEP_DIR"
   echo -n >&2 "
-          ast           ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          print RUNTIME ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          run   RUNTIME ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          ast           [--state SCHEMA FILE] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          print RUNTIME [--state SCHEMA FILE] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          run   RUNTIME [--state SCHEMA FILE] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
 
 Commands:"
   [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
@@ -51,6 +51,8 @@ Options:"
           Prefix shared ABI/BIN files for this build to avoid conflicts with
           dependencies"
   echo -n >&2 "
+  -s,--state SCHEMA FILE
+          Use a JSON state file with the given SCHEMA expression
   -a,--ast FILE
           A deploy AST file to use instead of Dhall code
   -f,--file FILE
@@ -123,13 +125,20 @@ link() {
   [[ -d $depDir ]] || usage "No dependency path given."
   [[ -d "$depDir/atd" ]] || usage "No './atd' directory found in dependency path."
 
-  ln -sfv -t ./atd/deps "$depDir"
+  ln -sfv -t ./atd/dep "$depDir"
   ln -sfv -t ./atd/evm "$depDir"/atd/evm/*
 }
 
 astArgs() {
   while [[ -n $1 ]]; do
     case "$1" in
+      -s|--state) shift
+        [[ -z $stateFile ]] || usage "--state option given too many times."
+        [[ -f $2 ]] || usage "\"$2\" is not a file."
+        stateFile="$2"
+        stateExpr=$(json-to-dhall --records-loose "$1" < "$stateFile")
+        shift
+        ;;
       -a|--ast) shift
         [[ -f $1 ]] || usage "\"$1\" is not a file."
         setAst "$1"
@@ -158,6 +167,11 @@ astArgs() {
   [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command."
   [[ $(cat ./atd/.backend) == "\"json\"" ]] \
     || usage "$(cat ./atd/.backend) is not a compatible backend, only 'json' is supported."
+
+  if [[ -n $stateExpr ]]; then
+    expression+=" $stateExpr"
+    stateExpr=""
+  fi
 }
 
 ast() {
@@ -181,7 +195,9 @@ plugin() {
     || usage "Runtime '$name' not available, please make '$cmd' available in your PATH."
 
   astArgs "${@:3}"
-  ast | exec $cmd "$action"
+
+  astJson=$(ast)
+  $cmd "$action" <<<"$astJson"
 }
 
 print() {
@@ -189,7 +205,17 @@ print() {
 }
 
 run() {
-  plugin "$1" run "${@:2}"
+  astArgs "${@:2}"
+
+  local stateJson
+  if [[ -n $stateFile ]]; then
+    stateJson=$(plugin "$1" run)
+    jq -c . <<<"$stateJson" > /dev/null
+    mv "$stateFile" "${stateFile}.backup"
+    printf %s "$stateJson" > "$stateFile"
+  else
+    plugin "$1" run
+  fi
 }
 
 case "$1" in

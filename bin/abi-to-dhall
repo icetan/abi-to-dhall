@@ -4,15 +4,21 @@ set -eo pipefail
 usage() {
   if [ "$1" ]; then echo >&2 "Error: $1"; fi
   echo >&2 "
-Usage: abi-to-dall [--backend BACKEND] [--prefix NAME] FILES..
+Usage: abi-to-dall [--module NAME] [--namespace NAME] FILES..
 
 Arguments:
   FILES..
           ABI file paths
 
 Options:
+  --module NAME
+          Name of module, used to avoid conflicts
+  --namespace NAME
+          Name of solidity package, used to avoid conflicts
+
+Depricated options:
   --backend BACKEND
-          (Depricated)
+          Select a backend renderer
 "
   exit 1
 }
@@ -32,7 +38,7 @@ gen() {
   contractName="${abiPath##*/}"
   contractName="${contractName%.*}"
   local abiDhall
-  abiDhall="$OUT_ABI_DIR/abi_$contractName.dhall"
+  abiDhall="$OUT_ABI_DIR/$contractName"
 
   echo -n >&2 "$abiPath -> "
 
@@ -40,47 +46,54 @@ gen() {
     sed 's/\[[0-9]*\]"/_list"/g' "$abiPath" \
       | json-to-dhall --records-strict --unions-first "($PACKAGE_PATH).abiSchema.Abi" \
       > "$abiDhall" \
-    && dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$ATD_PREFIX\" \"$contractName\" $abiDhall" \
-      | dhall format > "$OUT_ABI_DIR/$contractName"
+    && dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$BIN_PREFIX\" \"$contractName\" $abiDhall" \
+      | dhall format > "$OUT_CON_DIR/$contractName"
   }; then
     {
-      cp "$abiPath" "$EVM_OUT_DIR/${ATD_PREFIX}$contractName.abi" || true
-      cp "$binPath" "$EVM_OUT_DIR/${ATD_PREFIX}$contractName.bin" || true
+      cp "$abiPath" "$EVM_OUT_DIR/${BIN_PREFIX}$contractName.abi" || true
+      cp "$binPath" "$EVM_OUT_DIR/${BIN_PREFIX}$contractName.bin" || true
     } >&2
-    echo >&2 "$OUT_ABI_DIR/$contractName"
-    echo "$contractName"
+    echo >&2 "$OUT_CON_DIR/$contractName"
   else
     echo >&2 "Failed!"
     exit 2
   fi
 }
 
+updatePackage() {
+  local contracts
+  contracts=$(
+    cd "$OUT_DIR"
+    find -L "contract" -type f \
+      | sed 's|^\([^/]*\)/\(.*\)$|, \2 = ./\1/\2|;1s|,||'
+  )
+
+  rm -rf "$OUT_LIB_DIR/package"
+  dhall format <<<"
+    { Prelude = ./Prelude/package.dhall
+    , contracts = { $contracts }
+    } ⫽ ./lib ⫽ ./backend ⫽ ./types
+  " > "$OUT_LIB_DIR/package"
+}
+
 main() {
-  mkdir -p "$OUT_ABI_DIR" "$OUT_LIB_DIR" "$OUT_DEPS_DIR" "$EVM_OUT_DIR"
+  mkdir -p \
+    "$OUT_ABI_DIR" "$OUT_CON_DIR" \
+    "$OUT_LIB_DIR" "$OUT_DEP_DIR" "$EVM_OUT_DIR"
   ln -sfT "$PRELUDE_PATH" "$OUT_LIB_DIR/Prelude"
   dhall <<<"($PACKAGE_PATH).lib" > "$OUT_LIB_DIR/lib"
+  ln -srfT "$OUT_LIB_DIR/lib" "$OUT_CON_DIR/lib"
   dhall <<<"($BACKEND_PATH).util" > "$OUT_LIB_DIR/backend"
+  ln -srfT "$OUT_LIB_DIR/backend" "$OUT_CON_DIR/backend"
 
   dhall text <<<"($PACKAGE_PATH).typesGenerator $BACKEND_PATH ($PACKAGE_PATH).typesConversions" \
     | dhall format > "$OUT_LIB_DIR/types"
 
   echo "\"${BACKEND_NAME}\"" > "$OUT_LIB_DIR/.backend"
 
-  local sep
-  local contract
-  local contracts
-  for fn in "$@"; do
-    contract=$(gen "$fn")
-    [[ -n $contract ]] || exit 2
-    contracts+="$sep $contract = ./abi/$contract"
-    sep=,
-  done
+  for fn in "$@"; do gen "$fn"; done
 
-  dhall format <<<"
-    { Prelude = ./Prelude/package.dhall
-    , abis = { $contracts }
-    } ⫽ ./lib ⫽ ./backend ⫽ ./types
-  " > "$OUT_LIB_DIR/package"
+  updatePackage
 }
 
 while [ "$1" ]; do
@@ -88,8 +101,14 @@ while [ "$1" ]; do
     --backend) shift
       ATD_BACKEND="$1"
       ;;
-    --prefix) shift
-      ATD_PREFIX="${1}-"
+    --module) shift
+      ATD_MODULE="${1//[-\/ ]/_}"
+      ;;
+    --namespace) shift
+      ATD_NAMESPACE="${1//[\/ ]/-}"
+      ;;
+    --update-package)
+      ATD_UPDATE_PACKAGE=1
       ;;
     -*)
       usage "\"$1\" is not a recognized option."
@@ -100,8 +119,14 @@ while [ "$1" ]; do
   shift
 done
 
-LIB_DIR=$(cd "${LIB_DIR-${0%/*}/../dhall}" && pwd)
-PRELUDE_PATH=$(cd "${PRELUDE_PATH-${0%/*}/../dhall-lang/Prelude}" && pwd)
+if [[ -n $ATD_MODULE ]];    then BIN_PREFIX+="${ATD_MODULE}--"; fi
+if [[ -n $ATD_NAMESPACE ]]; then
+  BIN_PREFIX+="${ATD_NAMESPACE//-/_}-"
+  ATD_NAMESPACE="/$ATD_NAMESPACE"
+fi
+
+LIB_DIR=$(cd "${LIB_DIR:-${0%/*}/../dhall}" && pwd)
+PRELUDE_PATH=$(cd "${PRELUDE_PATH:-${0%/*}/../dhall-lang/Prelude}" && pwd)
 PACKAGE_PATH="$LIB_DIR/package.dhall"
 ATD_BACKEND=${ATD_BACKEND:-json}
 if [[ $ATD_BACKEND =~ / ]]; then
@@ -112,10 +137,15 @@ fi
 BACKEND_NAME="${BACKEND_PATH##*/}"
 BACKEND_NAME="${BACKEND_NAME%.*}"
 
-OUT_DIR="$PWD/atd" #$(mktemp -d)
+OUT_DIR="$PWD/atd"
 OUT_LIB_DIR="$OUT_DIR"
-OUT_ABI_DIR="$OUT_DIR/abi"
-OUT_DEPS_DIR="$OUT_DIR/deps"
+OUT_ABI_DIR="$OUT_DIR/abi$ATD_NAMESPACE"
+OUT_CON_DIR="$OUT_DIR/contract$ATD_NAMESPACE"
+OUT_DEP_DIR="$OUT_DIR/dep"
 EVM_OUT_DIR="$OUT_DIR/evm"
 
-main "$@"
+if [[ -n $ATD_UPDATE_PACKAGE ]]; then
+  updatePackage
+else
+  main "$@"
+fi

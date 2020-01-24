@@ -1,4 +1,4 @@
-{ lib, stdenv, makeWrapper, runCommand, writeScriptBin
+{ lib, stdenv, makeWrapper, runCommand, writeScriptBin, symlinkJoin
 , findutils, shellcheck
 , abi-to-dhall
 }:
@@ -20,37 +20,48 @@ overrideOverrideAttrs (
 , ... } @ args:
 
 let
-  abiToDhallMerged = runCommand "${name}-abi-to-dhall"
+  buildDappPackage = dappPkg: runCommand "${name}-${dappPkg.name}-dapp-to-dhall"
     { nativeBuildInputs = [ abi-to-dhall findutils ]; }
     ''
-    echo >&2 Building Dhall files from ABIs
+      echo >&2 "Building Dhall files from ABIs (${name}/${dappPkg.name})"
 
-    export XDG_CACHE_HOME="$PWD/.cache"
-    mkdir -p $out/dapp-out "XDG_CACHE_HOME"
+      export XDG_CACHE_HOME="$PWD/.cache"
+      mkdir -p "XDG_CACHE_HOME"
 
-    find ${
-      builtins.concatStringsSep
-        " "
-        (map (x: "${x}/dapp/*/out") solidityPackages)
-    } -maxdepth 1 -type f -exec ln -sf -t $out/dapp-out {} \;
-
-    abi-to-dhall --prefix "${name}" $out/dapp-out/*.abi
-
-    mkdir -p ./atd/deps
-    ${
-      builtins.concatStringsSep
-        "\n"
-        (map
-          (dep: ''
-            ln -s "${dep}/abi-to-dhall" "./atd/deps/${dep.name}"
-            ln -s -t ./atd/evm "${dep}"/abi-to-dhall/atd/evm/*
-          '')
-          deps)
-    }
-
-    mkdir -p $out/abi-to-dhall
-    mv -t $out/abi-to-dhall ./atd
+      dappOut="$out/abi-to-dhall/dapp-out/${dappPkg.name}"
+      mkdir -p "$dappOut"
+      find -L ${dappPkg}/dapp/*/out -maxdepth 1 -type f -exec ln -s -t "$dappOut" {} \;
+      abi-to-dhall --module "${name}" --namespace "${dappPkg.name}" "$dappOut"/*.abi
+      mv -t $out/abi-to-dhall ./atd
     '';
+
+  atdPackages = map buildDappPackage solidityPackages;
+
+  abiToDhallMerged = symlinkJoin {
+    name = "${name}-abi-to-dhall";
+    paths = atdPackages;
+    nativeBuildInputs = [ abi-to-dhall findutils ];
+    postBuild = ''
+      export XDG_CACHE_HOME="$PWD/.cache"
+      mkdir -p "XDG_CACHE_HOME"
+
+      cd $out/abi-to-dhall
+
+      abi-to-dhall --update-package
+
+      mkdir -p ./atd/dep
+      ${
+        builtins.concatStringsSep
+          "\n"
+          (map
+            (dep: ''
+              ln -s "${dep}/abi-to-dhall" "./atd/dep/${dep.name}"
+              ln -s -t ./atd/evm "${dep}"/abi-to-dhall/atd/evm/*
+            '')
+            deps)
+      }
+    '';
+  };
 
   runner = stdenv.mkDerivation {
     inherit src;
@@ -60,10 +71,10 @@ let
     ATD_MERGE = "${abiToDhallMerged}";
 
     installPhase = ''
-      mkdir -p $out/abi-to-dhall/deps
+      mkdir -p $out/abi-to-dhall
       cp -r -t $out/abi-to-dhall ./*
-      ln -s "$ATD_MERGE/dapp-out" $out/dapp-out
-      ln -s "$ATD_MERGE/abi-to-dhall/atd" $out/abi-to-dhall/atd
+      ln -sT "$ATD_MERGE/abi-to-dhall/dapp-out" $out/abi-to-dhall/dapp-out
+      ln -sT "$ATD_MERGE/abi-to-dhall/atd" $out/abi-to-dhall/atd
       makeWrapper ${abi-to-dhall}/bin/atd $out/bin/${name}-atd \
         --set ATD_PREBUILT "$out/abi-to-dhall/atd"
     '';

@@ -87,16 +87,18 @@ let funArgsToDhallArgNames
           (List/indexed SimpleArg (toSimpleArgs args))
 
 let toOutput
-    : Text → Text
-    =   λ(expr : Text)
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
       → ''
         echo \"$_sep \\\"''${id}\\\": \\\"''${${expr}}\\\"\";_sep=,''
 
-let toLiteral : Text → Text = λ(expr : Text) → "\${${expr}}"
+let toLiteral : Text → Text → Text = λ(type : Text) → λ(expr : Text) → "\${${expr}}"
 
 let toListLiteral
-    : Text → Text
-    =   λ(expr : Text)
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
       → "[\${./Prelude/Text/concatSep \",\" (${expr})}]"
 
 let sendValue =

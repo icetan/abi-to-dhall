@@ -5,8 +5,7 @@ let SimpleArgV2 =
 
 let ComplexArg = SimpleArg ⩓ { components : List SimpleArg }
 
-let ComplexArgV2 =
-      ComplexArg ⩓ { internalType : Text }
+let ComplexArgV2 = SimpleArgV2 ⩓ { components : List SimpleArgV2 }
 
 let FunArg =
       < Simple : SimpleArg
@@ -88,9 +87,9 @@ let Backend
       , callDef : ∀(fun : Fun) → Text
       , createValue : ∀(constructor : Constructor) → Text
       , createDef : ∀(constructor : Constructor) → Text
-      , toOutput : Text → Text
-      , toLiteral : Text → Text
-      , toListLiteral : Text → Text
+      , toOutput : Text → Text → Text
+      , toLiteral : Text → Text → Text
+      , toListLiteral : Text → Text → Text
       , util : BackendUtil
       }
 

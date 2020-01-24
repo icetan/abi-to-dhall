@@ -160,19 +160,22 @@ let createDef =
           ]
 
 let toOutput
-    : Text → Text
-    =   λ(val : Text)
-      → "{ \\\"op\\\": \\\"output\\\", \\\"id\\\": \\\"\${id}\\\", \\\"value\\\": \${${val}} }"
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
+      → "{ \\\"op\\\": \\\"output\\\", \\\"id\\\": \\\"\${id}\\\", \\\"value\\\": \${${expr}}, \\\"type\\\": \\\"${type}\\\" }"
 
 let toLiteral
-    : Text → Text
-    =   λ(val : Text)
-      → "{ \\\"op\\\": \\\"lit\\\", \\\"value\\\": \\\"\${${val}}\\\" }"
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
+      → "{ \\\"op\\\": \\\"lit\\\", \\\"value\\\": \\\"\${${expr}}\\\", \\\"type\\\": \\\"${type}\\\" }"
 
 let toListLiteral
-    : Text → Text
-    =   λ(expr : Text)
-      → "[ \${./Prelude/Text/concatMapSep \", \" Text (λ(x : Text) → \"\\\"\${x}\\\"\") (${expr})} ]"
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
+      → "{ \\\"op\\\": \\\"lit\\\", \\\"value\\\": [ \${./Prelude/Text/concatMapSep \", \" Text (λ(x : Text) → \"\\\"\${x}\\\"\") (${expr})} ], \\\"type\\\": \\\"${type}\\\" }"
 
 let backend : schema.Backend =
    { util =

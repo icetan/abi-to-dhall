@@ -256,7 +256,7 @@ let abiToDhall
       → λ(name : Text)
       → λ(ops : schema.Abi)
       → ''
-        let lib = ../lib
+        let lib = ./lib
 
         let Def = lib.Def
 
@@ -270,7 +270,7 @@ let abiToDhall
 
         let Plan = lib.Plan
 
-        let backend = ../backend
+        let backend = ./backend
 
         let prefix = "${prefix}"
 

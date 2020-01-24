@@ -28,23 +28,23 @@ let typeToDhallConstructor
       → ''
         ${t.name}/build =
             λ(val : ${t.type})
-          → { ${t.name} = "${backend.toLiteral "((${t.conv}) val)"}"
+          → { ${t.name} = "${backend.toLiteral "${t.name}" "((${t.conv}) val)"}"
             , def = ([] : Def)
             }
         , ${t.name}_list/build =
             λ(val : List ${t.type})
           → { ${t.name}_list = "${
-                backend.toListLiteral "./Prelude/List/map ${t.type} Text (${t.conv}) val"
+                backend.toListLiteral "${t.name}" "./Prelude/List/map ${t.type} Text (${t.conv}) val"
               }"
             , def = ([] : Def)
             }
         , ${t.name}/output =
           λ(id : Text) → λ(x : { ${t.name} : Text, def : Def }) → {
-            void = "${backend.toOutput "x.${t.name}"}", def = x.def
+            void = "${backend.toOutput "${t.name}" "x.${t.name}"}", def = x.def
           }
         , ${t.name}_list/output =
           λ(id : Text) → λ(x : { ${t.name}_list : Text, def : Def }) → {
-            void = "${backend.toOutput "x.${t.name}_list"}", def = x.def
+            void = "${backend.toOutput "${t.name}" "x.${t.name}_list"}", def = x.def
           }
         ''
 

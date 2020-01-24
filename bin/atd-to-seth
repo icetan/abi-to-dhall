@@ -8,15 +8,27 @@ function error(msg) {
 }
 
 function argTypes(node) {
-  return node.join(",")
+  return node.join(',')
 }
 
 function args(node) {
-  return node.map(op).map(x => `"${x}"`).join(" ")
+  return node.map(op).map(x => `"${x}"`).join(' ')
 }
 
-function quiet(sh) {
-  return `{ ${sh}; } 2>/dev/null`
+function outputVal(type, val) {
+  return /^u?int/.test(type) ? val : `\\"${val}\\"`
+}
+
+function output(node) {
+  const type = node.type
+  const value = node.value
+  const json =
+    (value.op === 'lit')
+    ? (Array.isArray(value.value)
+      ? `[ ${value.value.map(v => outputVal(type, v)).join(', ')} ]`
+      : outputVal(type, value.value))
+    : `\\"${op(value)}\\"`
+  return `out "${node.id}" "${json}"`
 }
 
 function op(node) {
@@ -24,15 +36,15 @@ function op(node) {
     { def: n => `_def_${n.id}=$(${op(n.def)})`
     , send: n => `seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , call: n => `seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
-    , create: n => `seth send --create "./atd/evm/${n.prefix}${n.contract}.bin"  "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
-    , callDef: n => `\${_def_${n.callDef}}`
-    , output: n => quiet(`echo "$_sep \\"${n.id}\\": \\"${op(n.value)}\\"";_sep=,`)
-    , lit: n => n.value
+    , create: n => `seth send --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , naturalToUint256: n => `$(seth --to-uint256 "${n.naturalToUint256}")`
     , integerToInt256: n => `$(seth --to-int256 "${n.integerToInt256}")`
     , hexToBytes32: n => `$(seth --to-bytes32 "${op(n.hexToBytes32)}")`
     , asciiToHex: n => `$(seth --from-ascii "${n.asciiToHex}")`
     , sig: n => `$(seth sig "${n.sig}")`
+    , callDef: n => `\${_def_${n.callDef}}`
+    , lit: n => n.value
+    , output: output
     }
 
   if (!(node.op in parse))
@@ -54,6 +66,8 @@ trap '{ echo "$_sep \\"meta\\":
   }
 }"; } 2>/dev/null' EXIT
 set -ex
+
+out() { { echo "$_sep \\"$1\\": $2";_sep=,; } 2>/dev/null; }
 
 ${ops.join("\n")}`
 }
