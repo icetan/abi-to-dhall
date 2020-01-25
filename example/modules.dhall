@@ -1,28 +1,46 @@
+let Optional/map = ./atd/Prelude/Optional/map
+
 let atd = ./atd/package
+
+let Address = atd.address
 
 let addr = atd.address/build
 
-let Plan/run = atd.Plan/run
+let addr/out = atd.address/output
 
-let Plan/runThen = atd.Plan/runThen
+let Plan = atd.Plan
 
-let Plan/runAll = atd.Plan/runAll
-
-let Plan/optional = atd.Plan/optional
+let Plan/buildThen = atd.Plan/buildThen
 
 let Module = atd.Module
 
-let Module/optional = atd.Module/optional
+let Module/default = atd.Module/default
 
-let Deploy = atd.Deploy
+let StateModule = atd.StateModule
 
-let Deploy/deploy = atd.Deploy/deploy
+let ds-token = atd.contracts.ds-token
 
-let DSToken = atd.abis.DSToken
+let DSToken = ds-token.DSToken
 
-let DSGuard = atd.abis.DSGuard
+let DSToken/build = ds-token.DSToken/build
 
-let Config = ./configSchema.dhall
+let DSToken/create/bytes32 = ds-token.DSToken/create/bytes32
+
+let ds-guard = atd.contracts.ds-guard
+
+let DSGuard = ds-guard.DSGuard
+
+let DSGuard/build = ds-guard.DSGuard/build
+
+let DSGuard/create = ds-guard.DSGuard/create
+
+let schema = ./schema.dhall
+
+let State = schema.State
+
+let Config = schema.Config
+
+let optionalAddr = Optional/map Text Address addr
 
 let sig/mint =
       atd.hexToBytes32 (atd.sig "mint(address,uint256)")
@@ -30,76 +48,54 @@ let sig/mint =
 let sig/burn =
       atd.hexToBytes32 (atd.sig "burn(address,uint256)")
 
-let BaseOutput
-      : Type
-      = { token : DSToken.Type
-        , guard : DSGuard.Type
-        }
+let createToken
+      : Optional Text → Module DSToken
+      =   λ(tokenAddress: Optional Text)
+        → Module/default
+            DSToken
+            (DSToken/create/bytes32 (atd.hexToBytes32 (atd.asciiToHex "EXAMPLE_TOKEN")))
+            (Optional/map Address DSToken DSToken/build (optionalAddr tokenAddress))
 
-let extraModule
-      : Module BaseOutput
-      =   λ(baseOutput : BaseOutput)
-        → DSToken.create/bytes32
-            (atd.hexToBytes32 (atd.asciiToHex "EXTRA_TOKEN"))
-            (λ(token : DSToken.Type)
+let createGuard
+      : Optional Text → Module DSGuard
+      =   λ(guardAddress: Optional Text)
+        → Module/default
+            DSGuard
+            DSGuard/create
+            (Optional/map Address DSGuard DSGuard/build (optionalAddr guardAddress))
 
-        → Plan/run
-            [ token.send/setAuthority/address baseOutput.guard.address
-            , baseOutput.token.send/mint/address-uint256
-                baseOutput.guard.address
-                (atd.naturalToUint256 (atd.ethToWei 1337))
+let guardModule
+      : Config → StateModule State
+      =   λ(conf : Config)
+        → λ(return : State → Plan)
+        → λ(state : State)
 
-            , atd.address/output "EXTRA_TOKEN" token.address
-            ]
-        )
+        → createToken state.tokenAddress
+            (λ(token : DSToken)
 
-let baseModule
-      : Module Config
-      =   λ(c : Config)
-        → DSToken.create/bytes32
-            (atd.hexToBytes32 (atd.asciiToHex "BASE_TOKEN"))
-            (λ(token : DSToken.Type)
+        → createGuard state.guardAddress
+            (λ(guard : DSGuard)
 
-        → DSGuard.create
-            (λ(guard : DSGuard.Type)
-
-        → Plan/run
+        → Plan/buildThen
             [ token.send/mint/address-uint256
                 guard.address
-                (atd.naturalToUint256 (atd.ethToWei 1000000))
-            , (DSToken.build (addr c.mcdGov)).send/setAuthority/address
+                (atd.naturalToUint256 conf.mint)
+            , token.send/setAuthority/address
                 guard.address
             , guard.send/permit/address-address-bytes32
-                (addr c.mcdFlap)
-                (addr c.mcdGov)
+                (addr conf.auctionAddress)
+                token.address
                 sig/mint
             , guard.send/permit/address-address-bytes32
-                (addr c.mcdFlap)
-                (addr c.mcdGov)
+                (addr conf.auctionAddress)
+                token.address
                 sig/burn
 
-            , atd.address/output "TOKEN" token.address
-            , atd.address/output "GUARD" guard.address
+            , addr/out "tokenAddress" token.address
+            , addr/out "guardAddress" guard.address
             ]
+            (return state)
       ))
 
-let rootModule
-      : Module Config
-      =   λ(c : Config)
-        → DSToken.create/bytes32
-            (atd.hexToBytes32 (atd.asciiToHex "ROOT_TOKEN"))
-            (λ(token : DSToken.Type)
-
-        → DSGuard.create
-            (λ(guard : DSGuard.Type)
-
-        → Plan/runAll
-            [ baseModule c
-            , Plan/optional False (extraModule { token = token, guard = guard })
-            ]
-        ))
-
-in  { rootModule = rootModule
-    , baseModule = baseModule
-    , extraModule = extraModule
+in  { module = guardModule
     }

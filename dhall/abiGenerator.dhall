@@ -297,12 +297,12 @@ let abiToDhall
                   }
               }
 
-        in  { Type = InstType
-            , build = build
-            , ${Text/concatMapSep
+        in  { ${name} = InstType
+            , ${name}/build = build
+            , ${name}/${Text/concatMapSep
                 ''
 
-                , ''
+                , ${name}/''
                 schema.Op
                 (abiOpToDhall backend name)
                 ( if hasConstructor ops

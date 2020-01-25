@@ -37,7 +37,7 @@
     sha256 = "0kg3rzag3irlcldck63rjspls614bc2sbs3zq44h0pzcz9v7z5h9";
   }) + "/Prelude";
 
-  binPaths = with pkgs; lib.makeBinPath [ coreutils gnused findutils dhall-haskell ];
+  binPaths = with pkgs; lib.makeBinPath [ coreutils gnused gnugrep findutils dhall-haskell ];
   atdBinPaths = with pkgs; lib.makeBinPath [ coreutils gnused bash jq dhall-haskell ];
 
   abi-to-dhall = pkgs.stdenv.mkDerivation {

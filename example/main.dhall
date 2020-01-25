@@ -1,15 +1,10 @@
 let atd = ./atd/package
 
-let Config = ./configSchema.dhall
-
 let modules = ./modules.dhall
 
-let deployment
-      : atd.Deploy Config
-      = [ modules.rootModule
-        --, atd.Module/optional False Config modules.extraModule
-        ]
+let schema = ./schema.dhall
 
-let deploy = atd.Deploy/deploy Config deployment
-
-in  deploy
+in  λ(conf : schema.Config)
+  → atd.StateModule/run
+      schema.State
+      (modules.module conf)

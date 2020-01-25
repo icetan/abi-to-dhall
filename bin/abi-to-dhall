@@ -65,14 +65,15 @@ updatePackage() {
   contracts=$(
     cd "$OUT_DIR"
     find -L "contract" -type f \
-      | sed 's|^\([^/]*\)/\(.*\)$|, \2 = ./\1/\2|;1s|,||'
+      | grep -vE '(lib|backend)$' \
+      | sed 's|^\([^/]*\)/\(.*\)/\([^/]*\)$|/\\ { \2 = ./\1/\2/\3 }|;1s|/\\||'
   )
 
   rm -rf "$OUT_LIB_DIR/package"
   dhall format <<<"
     { Prelude = ./Prelude/package.dhall
-    , contracts = { $contracts }
-    } ⫽ ./lib ⫽ ./backend ⫽ ./types
+    , contracts = $contracts
+    } // ./lib // ./backend // ./types
   " > "$OUT_LIB_DIR/package"
 }
 

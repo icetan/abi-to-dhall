@@ -1,5 +1,9 @@
 let Function/identity = ./Prelude/Function/identity
 
+let Optional/map = ./Prelude/Optional/map
+
+let Optional/default = ./Prelude/Optional/default
+
 let DefEntry
     : Type
     = { mapKey : Natural, mapValue : Text }
@@ -68,37 +72,47 @@ let Plan/optional
 
 let StatePlan
     : ∀(s : Type) → Type
-    = λ(State : Type) → ∀(s : State) → Plan
+    = λ(s : Type) → s → Plan
 
 let StatePlan/empty
     : ∀(s : Type) → StatePlan s
-    = λ(State : Type) → λ(s : State) → Plan/empty
+    = λ(s : Type) → λ(_ : s) → Plan/empty
 
 let Module
     : ∀(o : Type) → Type
-    = λ(Output : Type) → StatePlan Output → Plan
+    = λ(o : Type) → StatePlan o → Plan
+
+let Module/default
+    : ∀(t : Type) → Module t → Optional t → StatePlan t → Plan
+    =   λ(t : Type)
+      → λ(default : Module t)
+      → λ(optional : Optional t)
+      → λ(sp : StatePlan t)
+      → let optional_ = Optional/map t Plan sp optional
+
+        in  Optional/default Plan (default sp) optional_
 
 let StateModule
     : ∀(s : Type) → Type
-    = λ(State : Type) → StatePlan State → StatePlan State
+    = λ(s : Type) → StatePlan s → StatePlan s
 
 let StateModule/concat
     : ∀(s : Type) → List (StateModule s) → StateModule s
-    =   λ(State : Type)
-      → λ(sms : List (StateModule State))
+    =   λ(s : Type)
+      → λ(sms : List (StateModule s))
       → List/fold
-          (StateModule State)
+          (StateModule s)
           sms
-          (StatePlan State)
-          (Function/identity (StateModule State))
+          (StatePlan s)
+          (Function/identity (StateModule s))
 
 let StateModule/module
     : ∀(s : Type) → StateModule s → s → Module s
-    =   λ(State : Type)
-      → λ(sm : StateModule State)
-      → λ(s : State)
-      → λ(r : StatePlan State)
-      → sm r s
+    =   λ(s : Type)
+      → λ(module : StateModule s)
+      → λ(state : s)
+      → λ(return : StatePlan s)
+      → module return state
 
 let Plan/run
     : Plan → Run
@@ -142,6 +156,7 @@ in  { ethToWei = ethToWei
     , Plan/run = Plan/run
     , StatePlan/empty = StatePlan/empty
     , StatePlan/run = StatePlan/run
+    , Module/default = Module/default
     , Module/run = Module/run
     , StateModule/module = StateModule/module
     , StateModule/concat = StateModule/concat
