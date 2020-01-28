@@ -14,7 +14,7 @@ let Def
 
 let Void
     : Type
-    = { void : Text, def : Def }
+    = { _void : Text, def : Def } -- size : Natural,
 
 let ethToWei
     : Natural → Natural
@@ -24,11 +24,13 @@ let ethToGWei
     : Natural → Natural
     = λ(eth : Natural) → eth * 1000000000
 
+let Void/empty
+    : Void
+    = { _void = "", def = [] : Def } -- size = 0,
+
 let Void/optional
-    : Bool → Void → Void
-    =   λ(enable : Bool)
-      → λ(v : Void)
-      → if enable then v else { void = "", def = [] : Def }
+    : Optional Void → Void
+    = Optional/default Void Void/empty
 
 let Run
     : Type
@@ -67,8 +69,8 @@ let Plan/buildThen
       → run # after next tag
 
 let Plan/optional
-    : Bool → Plan → Plan
-    = λ(enable : Bool) → λ(p : Plan) → if enable then p else Plan/empty
+    : Optional Plan → Plan
+    = Optional/default Plan Plan/empty
 
 let StatePlan
     : ∀(s : Type) → Type
@@ -146,6 +148,7 @@ in  { ethToWei = ethToWei
     , StatePlan = StatePlan
     , Module = Module
     , StateModule = StateModule
+    , Void/empty = Void/empty
     , Void/optional = Void/optional
     , SinglePlan/empty = SinglePlan/empty
     , Plan/build = Plan/build

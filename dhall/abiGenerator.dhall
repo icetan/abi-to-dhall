@@ -1,21 +1,14 @@
-let Text/concatMapSep =
-        ./Prelude/Text/concatMapSep
-      ? https://prelude.dhall-lang.org/Text/concatMapSep
+let Text/concatMapSep = ./Prelude/Text/concatMapSep
 
-let Text/concatMap =
-      ./Prelude/Text/concatMap ? https://prelude.dhall-lang.org/Text/concatMap
+let Text/concatMap = ./Prelude/Text/concatMap
 
-let Text/concatSep =
-      ./Prelude/Text/concatSep ? https://prelude.dhall-lang.org/Text/concatSep
+let Text/concatSep = ./Prelude/Text/concatSep
 
-let List/map = ./Prelude/List/map ? https://prelude.dhall-lang.org/List/map
+let List/map = ./Prelude/List/map
 
-let List/filter =
-      ./Prelude/List/filter ? https://prelude.dhall-lang.org/List/filter
+let List/filter = ./Prelude/List/filter
 
 let schema = ./abiSchema.dhall
-
-let Def = schema.Def
 
 let FunArg = schema.FunArg
 
@@ -73,8 +66,13 @@ let toSimpleArgs
 let funIndexedArgToDhallFun
     : SimpleIArg → Text
     =   λ(iarg : SimpleIArg)
-      → "(arg${Natural/show
-                  iarg.index} : { ${iarg.value.type} : Text, def : Def })"
+      → let index = Natural/show iarg.index
+        let type = iarg.value.type
+        in
+        ''
+        (arg${index} : types.evm/${type}/Type)
+        → ''
+        -- → let tc0 = assert : lte arg${index}.size types.size/${type} === True in ''
 
 let funArgsToDhallFun
     : Text → List FunArg → Text
@@ -82,7 +80,7 @@ let funArgsToDhallFun
       → λ(args : List FunArg)
       → Text/concatMap
           SimpleIArg
-          (λ(arg : SimpleIArg) → prfx ++ (funIndexedArgToDhallFun arg) ++ " → ")
+          (λ(arg : SimpleIArg) → prfx ++ (funIndexedArgToDhallFun arg))
           (List/indexed SimpleArg (toSimpleArgs args))
 
 let funReturnToDhallType
@@ -147,9 +145,10 @@ let createFun
           → λ(tag : Natural)
           → next
               (build
-                  { address = ${backend.createValue constructor}
-                  , def = ${backend.createDef constructor}
-                  })
+                  (types.evm/address
+                    (${backend.createValue constructor})
+                    (${backend.createDef constructor})
+                  ))
               plan
               (tag + 1)
         ''
@@ -171,9 +170,10 @@ let send
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
               ${funArgsToDhallFun "λ" fun.inputs}
-              { void = ${backend.sendValue fun}
-              , def = ${backend.sendDef fun}
-              }
+              (types.evm/void
+                (${backend.sendValue fun})
+                (${backend.sendDef fun})
+              )
         ''
 
 let callType
@@ -184,7 +184,7 @@ let callType
         ${funSignature [ "call", fun.name ] fun.inputs} :
             ${funArgsToDhallFun "∀" fun.inputs}
             ∀(next :
-                { ${funReturnToDhallType fun.outputs}: Text, def : Def }
+                types.evm/${funReturnToDhallType fun.outputs}/Type
               → Plan
             )
           → ∀(plan : SinglePlan)
@@ -196,19 +196,21 @@ let call
     : schema.Backend → schema.Fun → Text
     =   λ(backend : schema.Backend)
       → λ(fun : schema.Fun)
-      → ''
+      → let  returnType = funReturnToDhallType fun.outputs
+        in
+        ''
         ${funSignature [ "call", fun.name ] fun.inputs} =
             ${funArgsToDhallFun "λ" fun.inputs}
             λ(next :
-                { ${funReturnToDhallType fun.outputs}: Text, def : Def }
+                types.evm/${returnType}/Type
               → Plan
             )
           → λ(plan : SinglePlan)
           → λ(tag : Natural)
           → next
-              { ${funReturnToDhallType fun.outputs} = ${backend.callValue fun}
-              , def = ${backend.callDef fun}
-              }
+              (types.evm/${returnType}
+                (${backend.callValue fun})
+                (${backend.callDef fun}))
               plan
               (tag + 1)
         ''
@@ -256,11 +258,13 @@ let abiToDhall
       → λ(name : Text)
       → λ(ops : schema.Abi)
       → ''
+        let lte = ./Prelude/Natural/lessThanEqual
+
+        let types = ./types
+
         let lib = ./lib
 
         let Def = lib.Def
-
-        let DefEntry = lib.DefEntry
 
         let Void = lib.Void
 
@@ -278,7 +282,7 @@ let abiToDhall
 
         let InstType
             : Type
-            = { address : { address : Text, def : Def }
+            = { address : types.Address
                 ${Text/concatMap
                   schema.Op
                   (λ(op : schema.Op) → ", " ++ (abiOpToDhallType backend name op))
@@ -287,8 +291,8 @@ let abiToDhall
               }
 
         let build
-            : ∀(address : { address : Text, def : Def }) → InstType
-            = λ(address : { address : Text, def : Def })
+            : ∀(address : types.Address) → InstType
+            = λ(address : types.Address)
             → { address = address
                 ${Text/concatMap
                   schema.Op

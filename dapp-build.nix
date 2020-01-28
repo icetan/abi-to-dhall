@@ -16,6 +16,7 @@ overrideOverrideAttrs (
 , src
 , deps ? []
 , solidityPackages ? []
+, abiFileGlobs ? [ "*" ]
 , passthru ? {}
 , ... } @ args:
 
@@ -31,7 +32,9 @@ let
       dappOut="$out/abi-to-dhall/dapp-out/${dappPkg.name}"
       mkdir -p "$dappOut"
       find -L ${dappPkg}/dapp/*/out -maxdepth 1 -type f -exec ln -s -t "$dappOut" {} \;
-      abi-to-dhall --module "${name}" --namespace "${dappPkg.name}" "$dappOut"/*.abi
+      abi-to-dhall --module "${name}" --namespace "${dappPkg.name}" $(find -L "$dappOut" -type f ${
+        lib.concatMapStringsSep " -or " (x: "-name \"${x}.abi\"") abiFileGlobs
+      })
       mv -t $out/abi-to-dhall ./atd
     '';
 

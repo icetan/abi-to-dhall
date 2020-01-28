@@ -65,14 +65,17 @@ updatePackage() {
   contracts=$(
     cd "$OUT_DIR"
     find -L "contract" -type f \
-      | grep -vE '(lib|backend)$' \
-      | sed 's|^\([^/]*\)/\(.*\)/\([^/]*\)$|/\\ { \2 = ./\1/\2/\3 }|;1s|/\\||'
+           ! -path "*/Prelude/*" \
+      -and ! -name lib \
+      -and ! -name types \
+      -and ! -name backend \
+    | sed 's|^\([^/]*\)/\(.*\)/\([^/]*\)$|/\\ { \2 = ./\1/\2/\3 }|'
   )
 
   rm -rf "$OUT_LIB_DIR/package"
   dhall format <<<"
     { Prelude = ./Prelude/package.dhall
-    , contracts = $contracts
+    , contracts = {=} $contracts
     } // ./lib // ./backend // ./types
   " > "$OUT_LIB_DIR/package"
 }
@@ -81,14 +84,19 @@ main() {
   mkdir -p \
     "$OUT_ABI_DIR" "$OUT_CON_DIR" \
     "$OUT_LIB_DIR" "$OUT_DEP_DIR" "$EVM_OUT_DIR"
-  ln -sfT "$PRELUDE_PATH" "$OUT_LIB_DIR/Prelude"
+  cp -r "$PRELUDE_PATH" "$OUT_LIB_DIR/Prelude"
+  chmod -R +w "$OUT_LIB_DIR/Prelude"
+  ln -srfT "$OUT_LIB_DIR/Prelude" "$OUT_CON_DIR/Prelude"
+
   dhall <<<"($PACKAGE_PATH).lib" > "$OUT_LIB_DIR/lib"
   ln -srfT "$OUT_LIB_DIR/lib" "$OUT_CON_DIR/lib"
+
   dhall <<<"($BACKEND_PATH).util" > "$OUT_LIB_DIR/backend"
   ln -srfT "$OUT_LIB_DIR/backend" "$OUT_CON_DIR/backend"
 
   dhall text <<<"($PACKAGE_PATH).typesGenerator $BACKEND_PATH ($PACKAGE_PATH).typesConversions" \
     | dhall format > "$OUT_LIB_DIR/types"
+  ln -srfT "$OUT_LIB_DIR/types" "$OUT_CON_DIR/types"
 
   echo "\"${BACKEND_NAME}\"" > "$OUT_LIB_DIR/.backend"
 

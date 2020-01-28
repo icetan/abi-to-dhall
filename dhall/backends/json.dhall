@@ -53,7 +53,7 @@ let toSimpleArgs
 let funIndexedArgToDhallFunValue
     : SimpleIArg → Text
     =   λ(iarg : SimpleIArg)
-      → "\${arg${Natural/show iarg.index}.${iarg.value.type}}"
+      → "\${types.evm/${iarg.value.type}/value arg${Natural/show iarg.index}}"
 
 let funArgsToDhallFunValue
     : List FunArg → Text
@@ -104,7 +104,7 @@ let sendValue =
         ${"''"}
         {
           "op": "send",
-          "address": ''${address.address},
+          "address": ''${address._address},
           "function": "${fun.name}",
           "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
           "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
@@ -130,7 +130,7 @@ let callDef =
             (backend.defineMem tag ${"''"}
             {
               "op": "call",
-              "address": ''${address.address},
+              "address": ''${address._address},
               "function": "${fun.name}",
               "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
               "args":     [ ${funArgsToDhallFunValue fun.inputs} ],

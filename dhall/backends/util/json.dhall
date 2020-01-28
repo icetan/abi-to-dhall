@@ -14,6 +14,8 @@ let Def = schema.Def
 
 let DefEntry = schema.DefEntry
 
+let TypeBase = schema.TypeBase
+
 let utils = ../../utils.dhall
 
 let concatDefs = utils.concatDefs
@@ -31,7 +33,7 @@ let undef
           (λ(e : DefEntry) → "{ \"op\": \"def\", \"id\": \"${Natural/show e.mapKey}\", \"def\": ${e.mapValue} }")
           def
 
-let void : Void → Text = λ(void : Void) → void.void
+let void : Void → Text = λ(void : Void) → void._void
 
 let obj
     : Text → Text → Text
@@ -54,22 +56,22 @@ let defineMem
 let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "\"${Natural/show id}\""
 
 let hexToBytes32
-    : Hex → { bytes32 : Text, def : Def }
-    = λ(hex : Hex) → { bytes32 = obj "hexToBytes32" hex.hex, def = ([] : Def) }
+    : Hex.Type → TypeBase ⩓ { _bytes : Text }
+    = λ(hex : Hex.Type) → { _bytes = obj "hexToBytes32" hex._hex, def = ([] : Def) } --, size = 32 }
 
 let asciiToHex
-    : Text → Hex
-    = λ(ascii : Text) → { hex = obj "asciiToHex" "\"${ascii}\"", def = ([] : Def) }
+    : Text → Hex.Type
+    = λ(ascii : Text) → Hex::{ _hex = obj "asciiToHex" "\"${ascii}\"" }
 
 let naturalToUint256
-    : Natural → { uint256 : Text, def : Def }
-    = λ(nat : Natural) → { uint256 = obj "naturalToUint256" "\"${Natural/show nat}\"", def = ([] : Def) }
+    : Natural → TypeBase ⩓ { _uint : Text }
+    = λ(nat : Natural) → { _uint = obj "naturalToUint256" "\"${Natural/show nat}\"", def = ([] : Def) } --, size = 32 }
 
 let integerToInt256
-    : Integer → { int256 : Text, def : Def }
-    = λ(int : Integer) → { int256 = obj "integerToInt256" "\"${Integer/show int}\"", def = ([] : Def) }
+    : Integer → TypeBase ⩓ { _int : Text }
+    = λ(int : Integer) → { _int = obj "integerToInt256" "\"${Integer/show int}\"", def = ([] : Def) } --, size = 32 }
 
-let sig : Text → Hex = λ(t : Text) → { hex = obj "sig" "\"${t}\"", def = ([] : Def) }
+let sig : Text → Hex.Type = λ(t : Text) → Hex::{ _hex = obj "sig" "\"${t}\"" }
 
 let toJSON
     : List Void → Text

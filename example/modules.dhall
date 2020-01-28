@@ -2,15 +2,19 @@ let Optional/map = ./atd/Prelude/Optional/map
 
 let atd = ./atd/package
 
-let Address = atd.address
+let Address = atd.Address
 
-let addr = atd.address/build
+let addr = atd.Address/build
 
-let addr/out = atd.address/output
+let addr/out = atd.Address/output
 
 let Plan = atd.Plan
 
+let Plan/build = atd.Plan/build
+
 let Plan/buildThen = atd.Plan/buildThen
+
+let Plan/concat = atd.Plan/concat
 
 let Module = atd.Module
 
@@ -49,20 +53,32 @@ let sig/burn =
       atd.hexToBytes32 (atd.sig "burn(address,uint256)")
 
 let createToken
-      : Optional Text → Module DSToken
-      =   λ(tokenAddress: Optional Text)
-        → Module/default
-            DSToken
-            (DSToken/create/bytes32 (atd.hexToBytes32 (atd.asciiToHex "EXAMPLE_TOKEN")))
-            (Optional/map Address DSToken DSToken/build (optionalAddr tokenAddress))
+    : Optional Address → Module DSToken
+    =   λ(tokenAddress : Optional Address)
+      → Module/default
+          DSToken
+          ( DSToken/create/bytes32
+              (atd.hexToBytes32 (atd.asciiToHex "EXAMPLE_TOKEN"))
+          )
+          ( Optional/map
+              Address
+              DSToken
+              DSToken/build
+              tokenAddress
+          )
 
 let createGuard
-      : Optional Text → Module DSGuard
-      =   λ(guardAddress: Optional Text)
-        → Module/default
-            DSGuard
-            DSGuard/create
-            (Optional/map Address DSGuard DSGuard/build (optionalAddr guardAddress))
+    : Optional Address → Module DSGuard
+    =   λ(guardAddress : Optional Address)
+      → Module/default
+          DSGuard
+          DSGuard/create
+          ( Optional/map
+              Address
+              DSGuard
+              DSGuard/build
+              guardAddress
+          )
 
 let guardModule
       : Config → StateModule State
@@ -76,25 +92,37 @@ let guardModule
         → createGuard state.guardAddress
             (λ(guard : DSGuard)
 
-        → Plan/buildThen
+        → let send = Plan/build
             [ token.send/mint/address-uint256
                 guard.address
                 (atd.naturalToUint256 conf.mint)
+
             , token.send/setAuthority/address
                 guard.address
+
             , guard.send/permit/address-address-bytes32
-                (addr conf.auctionAddress)
+                conf.auctionAddress
                 token.address
                 sig/mint
+
             , guard.send/permit/address-address-bytes32
-                (addr conf.auctionAddress)
+                conf.auctionAddress
                 token.address
                 sig/burn
+            ]
 
-            , addr/out "tokenAddress" token.address
+          let output = Plan/build
+            [ addr/out "tokenAddress" token.address
             , addr/out "guardAddress" guard.address
             ]
-            (return state)
+
+          in Plan/concat
+            [ send
+            , output
+            , return (state ⫽ { tokenAddress = Some token.address
+                              , guardAddress = Some guard.address
+                              })
+            ]
       ))
 
 in  { module = guardModule

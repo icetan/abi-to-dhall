@@ -1,7 +1,6 @@
 let SimpleArg = { name : Text, type : Text }
 
-let SimpleArgV2 =
-      SimpleArg ⩓ { internalType : Text }
+let SimpleArgV2 = SimpleArg ⩓ { internalType : Text }
 
 let ComplexArg = SimpleArg ⩓ { components : List SimpleArg }
 
@@ -14,11 +13,11 @@ let FunArg =
       | ComplexV2 : ComplexArgV2
       >
 
-let EvArg = { indexed : Bool, name : Text, type : Text, internalType : Optional Text }
-
 -- TODO: Make EvArg into a Union of EvArg | EvArgV2 instead of using Optional fields
 --let EvArgV2 = EvArg ⩓ { internalType : Text }
 --let EventArg = < Arg : EvArg | ArgV2 : EvArgV2 >
+let EvArg =
+      { indexed : Bool, name : Text, type : Text, internalType : Optional Text }
 
 let Fun =
       { constant : Bool
@@ -58,24 +57,29 @@ let Def
     : Type
     = List DefEntry
 
-let Hex
+let TypeBase
     : Type
-    = { hex : Text, def : Def }
+    = { def : Def } -- size : Natural,
+
+let Hex =
+      { Type = TypeBase ⩓ { _hex : Text }
+      , default = { _hex = "", def = [] : Def } -- size = 0,
+      }
 
 let Void
     : Type
-    = { void : Text, def : Def }
+    = TypeBase ⩓ { _void : Text }
 
 let BackendUtil
     : Type
     = { defineMem : Natural → Text → Def
       , callMem : Natural → Text
       , concatDefs : List Def → Def
-      , sig : Text → Hex
-      , hexToBytes32 : Hex → { bytes32 : Text, def : Def }
-      , asciiToHex : Text → Hex
-      , naturalToUint256 : Natural → { uint256 : Text, def : Def }
-      , integerToInt256 : Integer → { int256 : Text, def : Def }
+      , sig : Text → Hex.Type
+      , hexToBytes32 : Hex.Type → TypeBase ⩓ { _bytes : Text }
+      , asciiToHex : Text → Hex.Type
+      , naturalToUint256 : Natural → TypeBase ⩓ { _uint : Text }
+      , integerToInt256 : Integer → TypeBase ⩓ { _int : Text }
       , render : List Void → Text
       }
 
@@ -107,6 +111,7 @@ in  { Abi = Abi
     , ComplexArgV2 = ComplexArgV2
     , BackendUtil = BackendUtil
     , Backend = Backend
+    , TypeBase = TypeBase
     , Hex = Hex
     , Void = Void
     , DefEntry = DefEntry
