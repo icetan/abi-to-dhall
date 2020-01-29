@@ -4,7 +4,6 @@ let modules = ./modules.dhall
 
 let schema = ./schema.dhall
 
-in  λ(conf : schema.Config)
-  → atd.StateModule/run
-      schema.State
-      (modules.module conf)
+in    λ(conf : schema.Config)
+    → λ(input : schema.Input)
+    → atd.Module/run schema.Output (modules.module conf input)

@@ -6,6 +6,8 @@ let Helper = ./typesHelper.dhall
 
 let ConvType = Helper.Conv.Type
 
+let concatMapConvType = Text/concatMapSep "\n" ConvType
+
 let typeToDhallTypeLet
     : Backend → ConvType → Text
     =   λ(backend : Backend)
@@ -31,6 +33,16 @@ let typeToDhallTypeLet
               , def = ([] : Def)
               }
 
+        let ${t.name}/output =
+              λ(id : Text) → λ(x : ${t.name})
+            → { _void = "${backend.toOutput "${t.evm}" "x._${t.group}"}"
+              , def = x.def
+              }
+        let ${t.name}List/output =
+              λ(id : Text) → λ(x : ${t.name}List)
+            → { _void = "${backend.toOutput "${t.evm}" "x._${t.group}_list"}"
+              , def = x.def
+              }
         ''
 
 let typeToDhallExport
@@ -38,7 +50,7 @@ let typeToDhallExport
     =   λ(backend : Backend)
       → λ(t : ConvType)
       → ''
-        ${t.name} = ${t.name}
+        , ${t.name} = ${t.name}
         , ${t.name}List = ${t.name}List
 
         , ${t.name}/build = ${t.name}/build
@@ -66,42 +78,8 @@ let typeToDhallExport
         --, evm/${t.evm}/size = $ {Natural/show t.size}
         --, evm/${t.evm}_list/size = $ {Natural/show t.size}
 
-        , ${t.name}/output =
-              λ(id : Text) → λ(x : ${t.name})
-            → { _void = "${backend.toOutput "${t.evm}" "x._${t.group}"}"
-              --, size = 0
-              , def = x.def
-              }
-        , ${t.name}List/output =
-              λ(id : Text) → λ(x : ${t.name}List)
-            → { _void = "${backend.toOutput "${t.evm}" "x._${t.group}_list"}"
-              --, size = 0
-              , def = x.def
-              }
-        ''
-
-let typeToDhallReadType
-    : ConvType → Text
-    =   λ(t : ConvType)
-      → ''
-        let ${t.name}/Read = { ${t.name} : Text }
-        let ${t.name}List/Read = { ${t.name}List : List Text }
-        ''
-
-let typeToDhallReadTypeUnion
-    : ConvType → Text
-    =   λ(t : ConvType)
-      → ''
-        | ${t.name} : ${t.name}/Read
-        | ${t.name}List : ${t.name}List/Read
-        ''
-
-let typeToDhallReadTypeMerge
-    : ConvType → Text
-    =   λ(t : ConvType)
-      → ''
-          ${t.name} = λ(v : ${t.name}/Read) → ${t.name}/build v.${t.name}
-        , ${t.name}List = λ(v : ${t.name}List/Read) → ${t.name}List/build v.${t.name}List
+        , ${t.name}/output = ${t.name}/output
+        , ${t.name}List/output = ${t.name}List/output
         ''
 
 let typesToDhallTypeLets
@@ -109,9 +87,7 @@ let typesToDhallTypeLets
     =   λ(backend : Backend)
       → λ(ls : List ConvType)
       → "${Text/concatMapSep
-               ''
-
-               ''
+               "\n"
                ConvType
                (typeToDhallTypeLet backend)
                ls}"
@@ -121,9 +97,7 @@ let typesToDhallExports
     =   λ(backend : Backend)
       → λ(ls : List ConvType)
       → "{ ${Text/concatMapSep
-               ''
-
-               , ''
+               "\n"
                ConvType
                (typeToDhallExport backend)
                ls} }"

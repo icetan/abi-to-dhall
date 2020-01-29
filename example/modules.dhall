@@ -4,9 +4,9 @@ let atd = ./atd/package
 
 let Address = atd.Address
 
-let addr = atd.Address/build
+let Address/build = atd.Address/build
 
-let addr/out = atd.Address/output
+let Address/output = atd.Address/output
 
 let Plan = atd.Plan
 
@@ -16,11 +16,11 @@ let Plan/buildThen = atd.Plan/buildThen
 
 let Plan/concat = atd.Plan/concat
 
+let Plan/outputs = atd.Plan/outputs
+
 let Module = atd.Module
 
 let Module/default = atd.Module/default
-
-let StateModule = atd.StateModule
 
 let ds-token = atd.contracts.ds-token
 
@@ -40,11 +40,11 @@ let DSGuard/create = ds-guard.DSGuard/create
 
 let schema = ./schema.dhall
 
-let State = schema.State
+let Input = schema.Input
+
+let Output = schema.Output
 
 let Config = schema.Config
-
-let optionalAddr = Optional/map Text Address addr
 
 let sig/mint =
       atd.hexToBytes32 (atd.sig "mint(address,uint256)")
@@ -80,16 +80,22 @@ let createGuard
               guardAddress
           )
 
-let guardModule
-      : Config → StateModule State
-      =   λ(conf : Config)
-        → λ(return : State → Plan)
-        → λ(state : State)
+let outputAddresses
+    =   λ(o : Output)
+      → Plan/outputs Address Address/output (toMap o)
 
-        → createToken state.tokenAddress
+let optionalAddress = Optional/map Text Address Address/build
+
+let guardModule
+      : Config → Input → Module Output
+      =   λ(conf : Config)
+        → λ(input : Input)
+        → λ(return : Output → Plan)
+
+        → createToken (optionalAddress input.tokenAddress)
             (λ(token : DSToken)
 
-        → createGuard state.guardAddress
+        → createGuard (optionalAddress input.guardAddress)
             (λ(guard : DSGuard)
 
         → let send = Plan/build
@@ -111,19 +117,16 @@ let guardModule
                 sig/burn
             ]
 
-          let output = Plan/build
-            [ addr/out "tokenAddress" token.address
-            , addr/out "guardAddress" guard.address
-            ]
+          let output =
+            { tokenAddress = token.address
+            , guardAddress = guard.address
+            }
 
           in Plan/concat
             [ send
-            , output
-            , return (state ⫽ { tokenAddress = Some token.address
-                              , guardAddress = Some guard.address
-                              })
+            , outputAddresses output
+            , return output
             ]
       ))
 
-in  { module = guardModule
-    }
+in  { module = guardModule }

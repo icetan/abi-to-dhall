@@ -1,10 +1,6 @@
 let atd = ./atd/package
 
-let State =
-      { tokenAddress : Optional atd.Address
-      , guardAddress : Optional atd.Address
-      }
-
-let Config = { mint : Natural, auctionAddress : atd.Address }
-
-in  { Config = Config, State = State }
+in  { Input = { tokenAddress : Optional Text, guardAddress : Optional Text }
+    , Output = { tokenAddress : atd.Address, guardAddress : atd.Address }
+    , Config = { mint : Natural, auctionAddress : atd.Address }
+    }

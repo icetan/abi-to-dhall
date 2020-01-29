@@ -74,8 +74,7 @@ updatePackage() {
 
   rm -rf "$OUT_LIB_DIR/package"
   dhall format <<<"
-    { Prelude = ./Prelude/package.dhall
-    , contracts = {=} $contracts
+    { contracts = {=} $contracts
     } // ./lib // ./backend // ./types
   " > "$OUT_LIB_DIR/package"
 }

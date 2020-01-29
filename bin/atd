@@ -18,9 +18,9 @@ Usage: atd"
           build [--prefix NAME] [ABI_BIN_DIR]
           link  DEP_DIR"
   echo -n >&2 "
-          ast           [--state SCHEMA FILE] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          print RUNTIME [--state SCHEMA FILE] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          run   RUNTIME [--state SCHEMA FILE] ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          ast           ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          print RUNTIME ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          run   RUNTIME ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
 
 Commands:"
   [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
@@ -50,9 +50,15 @@ Options:"
   --prefix NAME
           Prefix shared ABI/BIN files for this build to avoid conflicts with
           dependencies"
+
+  # NOTE: Hide for now
+  #-s,--state SCHEMA FILE
+  #        Use a JSON state file with the given SCHEMA expression
+
   echo -n >&2 "
-  -s,--state SCHEMA FILE
-          Use a JSON state file with the given SCHEMA expression
+  -i,--input SCHEMA FILE
+          Use a JSON file with the given SCHEMA as input, can be given multiple
+          times
   -a,--ast FILE
           A deploy AST file to use instead of Dhall code
   -f,--file FILE
@@ -139,6 +145,11 @@ astArgs() {
         stateExpr=$(json-to-dhall --records-loose "$1" < "$stateFile")
         shift
         ;;
+      -i|--input) shift
+        [[ -f $2 ]] || usage "\"$2\" is not a file."
+        inputExpr+=" $(json-to-dhall --records-loose "$1" < "$2")"
+        shift
+        ;;
       -a|--ast) shift
         [[ -f $1 ]] || usage "\"$1\" is not a file."
         setAst "$1"
@@ -171,6 +182,11 @@ astArgs() {
   if [[ -n $stateExpr ]]; then
     expression+=" $stateExpr"
     stateExpr=""
+  fi
+
+  if [[ -n $inputExpr ]]; then
+    expression+="$inputExpr"
+    inputExpr=""
   fi
 }
 

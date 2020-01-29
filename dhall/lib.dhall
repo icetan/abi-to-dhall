@@ -4,9 +4,15 @@ let Optional/map = ./Prelude/Optional/map
 
 let Optional/default = ./Prelude/Optional/default
 
+let List/map = ./Prelude/List/map
+
+let Map = ./Prelude/Map/Type
+
+let Entry = ./Prelude/Map/Entry
+
 let DefEntry
     : Type
-    = { mapKey : Natural, mapValue : Text }
+    = Entry Natural Text
 
 let Def
     : Type
@@ -85,14 +91,41 @@ let Module
     = λ(o : Type) → StatePlan o → Plan
 
 let Module/default
-    : ∀(t : Type) → Module t → Optional t → StatePlan t → Plan
+    : ∀(t : Type) → Module t → Optional t → Module t
     =   λ(t : Type)
       → λ(default : Module t)
-      → λ(optional : Optional t)
+      → λ(o : Optional t)
       → λ(sp : StatePlan t)
-      → let optional_ = Optional/map t Plan sp optional
+      → Optional/default Plan (default sp) (Optional/map t Plan sp o)
 
-        in  Optional/default Plan (default sp) optional_
+let Module/fork
+    : ∀(a : Type) → ∀(b : Type) → (a → Module b) → Optional a → Module (Optional b)
+    =   λ(a : Type)
+      → λ(b : Type)
+      → λ(f : a → StatePlan b → Plan)
+      → λ(o : Optional a)
+      → λ(sp : StatePlan (Optional b))
+      → (Optional/default
+          (Module (Optional b))
+          (λ(return : StatePlan (Optional b)) → return (None b))
+          (Optional/map
+            a
+            (Module (Optional b))
+            (λ(x : a)
+            → (λ(return : StatePlan (Optional b))
+              → (f x (λ(y : b) → return (Some y)))
+              ))
+            o)
+          ) sp
+
+let Module/optional
+    : ∀(a : Type) → ∀(b : Type) → (a → b) → Optional a → Module (Optional b)
+    =   λ(a : Type)
+      → λ(b : Type)
+      → λ(f : a → b)
+      → λ(o : Optional a)
+      → λ(sp : StatePlan (Optional b))
+      → sp (Optional/map a b f o)
 
 let StateModule
     : ∀(s : Type) → Type
@@ -124,11 +157,17 @@ let StatePlan/run
     : ∀(s : Type) → StatePlan s → s → Run
     = λ(State : Type) → λ(sp : StatePlan State) → λ(s : State) → Plan/run (sp s)
 
+let Module/plan
+    : ∀(o : Type) → Module o → Plan
+    =   λ(o : Type)
+      → λ(module : Module o)
+      → module (StatePlan/empty o)
+
 let Module/run
     : ∀(o : Type) → Module o → Run
-    =   λ(Output : Type)
-      → λ(module : Module Output)
-      → Plan/run (module (StatePlan/empty Output))
+    =   λ(o : Type)
+      → λ(module : Module o)
+      → Plan/run (Module/plan o module)
 
 let StateModule/run
     : ∀(s : Type) → StateModule s → s → Run
@@ -136,6 +175,19 @@ let StateModule/run
       → λ(sm : StateModule State)
       → λ(s : State)
       → Module/run State (StateModule/module State sm s)
+
+let Plan/outputs
+    : ∀(t : Type) → (Text → t → Void) → Map Text t → Plan
+    =   λ(t : Type)
+      → λ(f : Text → t → Void)
+      → λ(m : Map Text t)
+      → Plan/build
+          (List/map
+            (Entry Text t)
+            Void
+            (λ(x : Entry Text t) → f x.mapKey x.mapValue)
+            m
+          )
 
 in  { ethToWei = ethToWei
     , ethToGWei = ethToGWei
@@ -145,9 +197,9 @@ in  { ethToWei = ethToWei
     , Run = Run
     , SinglePlan = SinglePlan
     , Plan = Plan
-    , StatePlan = StatePlan
+    --, StatePlan = StatePlan
     , Module = Module
-    , StateModule = StateModule
+    --, StateModule = StateModule
     , Void/empty = Void/empty
     , Void/optional = Void/optional
     , SinglePlan/empty = SinglePlan/empty
@@ -157,11 +209,15 @@ in  { ethToWei = ethToWei
     , Plan/optional = Plan/optional
     , Plan/concat = Plan/concat
     , Plan/run = Plan/run
-    , StatePlan/empty = StatePlan/empty
-    , StatePlan/run = StatePlan/run
+    , Plan/outputs = Plan/outputs
+    --, StatePlan/empty = StatePlan/empty
+    --, StatePlan/run = StatePlan/run
     , Module/default = Module/default
+    , Module/optional = Module/optional
+    , Module/fork = Module/fork
+    , Module/plan = Module/plan
     , Module/run = Module/run
-    , StateModule/module = StateModule/module
-    , StateModule/concat = StateModule/concat
-    , StateModule/run = StateModule/run
+    --, StateModule/module = StateModule/module
+    --, StateModule/concat = StateModule/concat
+    --, StateModule/run = StateModule/run
     }
