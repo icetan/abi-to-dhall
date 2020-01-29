@@ -13,7 +13,7 @@ in
 
 overrideOverrideAttrs (
 { name
-, src
+, src ? null
 , deps ? []
 , solidityPackages ? []
 , abiFileGlobs ? [ "*" ]
@@ -66,24 +66,25 @@ let
     '';
   };
 
-  runner = stdenv.mkDerivation {
-    inherit src;
-    name = "${name}-atd";
-    nativeBuildInputs = [ makeWrapper ];
+  runner = runCommand "${name}-atd" {
+      nativeBuildInputs = [ makeWrapper ];
 
-    ATD_MERGE = "${abiToDhallMerged}";
+      ATD_MERGE = "${abiToDhallMerged}";
 
-    installPhase = ''
+      passthru = {
+        inherit solidityPackages;
+      } // passthru;
+    } ''
       mkdir -p $out/abi-to-dhall
-      cp -r -t $out/abi-to-dhall ./*
+      ${
+        lib.optionalString
+          (src != null)
+          "cp -r -t $out/abi-to-dhall ${src}/*"
+      }
       ln -sT "$ATD_MERGE/abi-to-dhall/dapp-out" $out/abi-to-dhall/dapp-out
       ln -sT "$ATD_MERGE/abi-to-dhall/atd" $out/abi-to-dhall/atd
       makeWrapper ${abi-to-dhall}/bin/atd $out/bin/${name}-atd \
         --set ATD_PREBUILT "$out/abi-to-dhall/atd"
     '';
 
-    passthru = {
-      inherit solidityPackages;
-    } // passthru;
-  };
 in runner // (removeAttrs args [ "solidityPackages" "passthru" ]))
