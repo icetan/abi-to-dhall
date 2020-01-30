@@ -83,25 +83,25 @@ function op(node) {
 function ast(node) {
   const ops = node.ops.map(op)
   return `#!/usr/bin/env bash
+out() { { echo "$_sep \\"$1\\": $2";_sep=,; } 2>/dev/null; }${
+enableEstimates ? `
+est() { { estimates+="$_esep $1";_esep=,; } 2>/dev/null; }` : ""}
+
 echo -n "{";
 trap 'exit 130' INT
 trap 'exit 131' TERM
 trap '{ echo "$_sep \\"meta\\":
-  { \\"runtime\\": \\"atd-to-seth\\"
-  , \\"estimates\\": [$estimates ]
+  { \\"runtime\\": \\"atd-to-seth\\"${
+enableEstimates ? `
+  , \\"estimates\\": [$estimates ]` : ""}
   , \\"exit\\": $?
   , \\"date\\": \\"$(date -u +"%FT%T.000Z")\\"
   }
 }"; } 2>/dev/null' EXIT
-set -ex
-
-out() { { echo "$_sep \\"$1\\": $2";_sep=,; } 2>/dev/null; }${
-enableEstimates ? `
-est() { { estimates+="$_esep $1";_esep=,; } 2>/dev/null; }` : ""
-}${
+set -ex${
 enableNonce ? `
-export ETH_NONCE=$(seth nonce "$ETH_FROM")` : ""
-}
+
+export ETH_NONCE=$(seth nonce "$ETH_FROM")` : ""}
 
 ${ops.join("\n")}`
 }
