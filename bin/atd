@@ -5,7 +5,8 @@ BIN_PATH=$(realpath "${0%/*}")
 PATH="$BIN_PATH:$PATH"
 
 usage() {
-  if [[ -n $1 ]]; then echo >&2 "Error: $1"; fi
+  local ecode=0
+  if [[ -n $1 ]]; then echo >&2 "Error: $1"; ecode=1; fi
 
   # TODO: Fix "bash: compgen: command not found" when wrapped with nix.
   runtimes=$(command -v compgen >/dev/null \
@@ -18,9 +19,10 @@ Usage: atd"
           build [--prefix NAME] [ABI_BIN_DIR]
           link  DEP_DIR"
   echo -n >&2 "
-          ast           ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          print RUNTIME ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
-          run   RUNTIME ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          ast   ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          print RUNTIME [--args ARG.. \;] ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          run   RUNTIME [--args ARG.. \;] ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
+          help
 
 Commands:"
   [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
@@ -30,6 +32,7 @@ Commands:"
   ast     Print AST to STDOUT
   print   Print a runtimes deployment plan to STDOUT
   run     Execute a runtime deployment
+  help    Print this message
 
 Arguments:"
   [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
@@ -56,6 +59,8 @@ Options:"
   #        Use a JSON state file with the given SCHEMA expression
 
   echo -n >&2 "
+  --args ARG..
+          Arguments to pass to runtime process, needs to be ended with '\;'
   -i,--input SCHEMA FILE
           Use a JSON file with the given SCHEMA as input, can be given multiple
           times
@@ -67,8 +72,10 @@ Options:"
           A Dhall expression to evaluate as deploy config
   -- DHALL_EXPRESSION..
           Use rest of arguments as a Dhall expression (similar to --expr)
+
+Version: ${_VERSION:-unknown}
 "
-  exit 1
+  exit $ecode
 }
 
 setExpr() {
@@ -135,16 +142,34 @@ link() {
   ln -sfv -t ./atd/evm "$depDir"/atd/evm/*
 }
 
+runArgs() {
+  while [[ -n $1 ]]; do
+    case "$1" in
+      --args) shift
+        while [[ -n $1 && $1 != ";" ]]; do
+          runtimeArgs+=( "$1" )
+          shift
+        done
+        shift
+        ;;
+      *)
+        astArgs "${@}"
+        break
+        ;;
+    esac
+  done
+}
+
 astArgs() {
   while [[ -n $1 ]]; do
     case "$1" in
-      -s|--state) shift
-        [[ -z $stateFile ]] || usage "--state option given too many times."
-        [[ -f $2 ]] || usage "\"$2\" is not a file."
-        stateFile="$2"
-        stateExpr=$(json-to-dhall --records-loose "$1" < "$stateFile")
-        shift
-        ;;
+      #-s|--state) shift
+      #  [[ -z $stateFile ]] || usage "--state option given too many times."
+      #  [[ -f $2 ]] || usage "\"$2\" is not a file."
+      #  stateFile="$2"
+      #  stateExpr=$(json-to-dhall --records-loose "$1" < "$stateFile")
+      #  shift
+      #  ;;
       -i|--input) shift
         [[ -f $2 ]] || usage "\"$2\" is not a file."
         inputExpr+=" $(json-to-dhall --records-loose "$1" < "$2")"
@@ -179,10 +204,10 @@ astArgs() {
   [[ $(cat ./atd/.backend) == "\"json\"" ]] \
     || usage "$(cat ./atd/.backend) is not a compatible backend, only 'json' is supported."
 
-  if [[ -n $stateExpr ]]; then
-    expression+=" $stateExpr"
-    stateExpr=""
-  fi
+  #if [[ -n $stateExpr ]]; then
+  #  expression+=" $stateExpr"
+  #  stateExpr=""
+  #fi
 
   if [[ -n $inputExpr ]]; then
     expression+="$inputExpr"
@@ -202,7 +227,7 @@ ast() {
 }
 
 plugin() {
-  local name="${1:-seth}"
+  local name="$1"
   local action="$2"
   local cmd="atd-to-$name"
   [[ ! $name =~ ^- ]] \
@@ -210,10 +235,10 @@ plugin() {
   command -v "$cmd" >/dev/null \
     || usage "Runtime '$name' not available, please make '$cmd' available in your PATH."
 
-  astArgs "${@:3}"
+  runArgs "${@:3}"
 
   astJson=$(ast)
-  $cmd "$action" <<<"$astJson"
+  $cmd "$action" "${runtimeArgs[@]}" <<<"$astJson"
 }
 
 print() {
@@ -221,17 +246,18 @@ print() {
 }
 
 run() {
-  astArgs "${@:2}"
+  #astArgs "${@:2}"
 
-  local stateJson
-  if [[ -n $stateFile ]]; then
-    stateJson=$(plugin "$1" run)
-    jq -c . <<<"$stateJson" > /dev/null
-    mv "$stateFile" "${stateFile}.backup"
-    printf %s "$stateJson" > "$stateFile"
-  else
-    plugin "$1" run
-  fi
+  #local stateJson
+  #if [[ -n $stateFile ]]; then
+  #  stateJson=$(plugin "$1" run)
+  #  jq -c . <<<"$stateJson" > /dev/null
+  #  mv "$stateFile" "${stateFile}.backup"
+  #  printf %s "$stateJson" > "$stateFile"
+  #else
+  #  plugin "$1" run
+  #fi
+  plugin "$1" run "${@:2}"
 }
 
 case "$1" in
@@ -247,6 +273,9 @@ case "$1" in
       ln -sfT "$ATD_PREBUILT" ./atd
     fi
     $1 "${@:2}"
+    ;;
+  help)
+    usage
     ;;
   *)
     usage "\"$1\" is not a command."

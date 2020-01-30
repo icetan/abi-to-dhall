@@ -2,6 +2,11 @@
 const fs = require('fs')
 const { spawn } = require('child_process');
 
+const command = process.argv[2]
+const opts = process.argv.slice(3)
+const enableEstimates = opts.indexOf("--estimate") !== -1
+const enableNonce = opts.indexOf("--nonce") !== -1
+
 function error(msg) {
   console.error(`Error: ${msg}`)
   process.exit(1)
@@ -31,10 +36,32 @@ function output(node) {
   return `out "${node.id}" "${json}"`
 }
 
+function estimate(node) {
+  if (!enableEstimates) return ""
+
+  const parse =
+    { send: n => `est $(seth estimate "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)})`
+    , call: n => `est $(seth estimate "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}) `
+    , create: n => `est $(seth estimate --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)})`
+    }
+
+  if (!(node.op in parse)) return ""
+
+  return parse[node.op](node) + "\n"
+}
+
+function nonce() {
+  return enableNonce ? "\nETH_NONCE=$((ETH_NONCE + 1))" : ""
+}
+
+function sendAsync() {
+  return enableNonce ? "SETH_ASYNC=yes " : ""
+}
+
 function op(node) {
   const parse =
-    { def: n => `_def_${n.id}=$(${op(n.def)})`
-    , send: n => `seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
+    { def: n => `${estimate(n.def)}_def_${n.id}=$(${op(n.def)})${nonce()}`
+    , send: n => `${estimate(n)}${sendAsync()}seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}${nonce()}`
     , call: n => `seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
     , create: n => `seth send --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , naturalToUint256: n => `$(seth --to-uint256 "${n.naturalToUint256}")`
@@ -61,27 +88,33 @@ trap 'exit 130' INT
 trap 'exit 131' TERM
 trap '{ echo "$_sep \\"meta\\":
   { \\"runtime\\": \\"atd-to-seth\\"
+  , \\"estimates\\": [$estimates ]
   , \\"exit\\": $?
   , \\"date\\": \\"$(date -u +"%FT%T.000Z")\\"
   }
 }"; } 2>/dev/null' EXIT
 set -ex
 
-out() { { echo "$_sep \\"$1\\": $2";_sep=,; } 2>/dev/null; }
+out() { { echo "$_sep \\"$1\\": $2";_sep=,; } 2>/dev/null; }${
+enableEstimates ? `
+est() { { estimates+="$_esep $1";_esep=,; } 2>/dev/null; }` : ""
+}${
+enableNonce ? `
+export ETH_NONCE=$(seth nonce "$ETH_FROM")` : ""
+}
 
 ${ops.join("\n")}`
 }
 
-const action = process.argv[2]
 const data = fs.readFileSync(0, 'utf-8')
-const json = ast(JSON.parse(data))
+const script = ast(JSON.parse(data))
 
-if (action === 'run') {
+if (command === 'run') {
   const child = spawn('bash')
   child.stdout.pipe(process.stdout, { end: false });
   child.stderr.pipe(process.stderr, { end: false });
-  child.stdin.write(json)
+  child.stdin.write(script)
   child.stdin.end();
 } else {
-  console.log(json)
+  console.log(script)
 }

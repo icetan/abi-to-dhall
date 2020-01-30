@@ -86,25 +86,29 @@ file.
 dhall <<EOF
 let atd = ./atd/package
 
-let DSToken = atd.abis.DSToken
+let DSToken = atd.contracts.DSToken
 
-let DSGuard = atd.abis.DSGuard
+let DSToken/create/bytes32 = atd.contracts.DSToken/create/bytes32
+
+let DSGuard = atd.contracts.DSGuard
+
+let DSGuard/create = atd.contracts.DSGuard/create
 
 let plan
-      = DSToken.create/bytes32
+      = DSToken/create/bytes32
           (atd.hexToBytes32 (atd.asciiToHex "MyToken"))
-          (λ(token : DSToken.Type)
+          (λ(token : DSToken)
 
-      → DSGuard.create
-          (λ(guard : DSGuard.Type)
+      → DSGuard/create
+          (λ(guard : DSGuard)
 
-      → atd.Plan/run
+      → atd.Plan/build
             [ token.send/setAuthority/address guard.address
-            , (atd.address/output "TOKEN" token.address)
-            , (atd.address/output "GUARD" guard.address)
+            , (atd.Address/output "TOKEN" token.address)
+            , (atd.Address/output "GUARD" guard.address)
             ]
       ))
-in atd.render (atd.Plan/deploy plan)
+in atd.render (atd.Plan/run plan)
 EOF
 ```
 
@@ -128,6 +132,9 @@ atd
 
 ### Module
 
-### StateModule
-
 ## EVM Types
+
+  - Address
+  - Uint
+  - Int
+  - Bytes32

@@ -19,6 +19,8 @@ Options:
 Depricated options:
   --backend BACKEND
           Select a backend renderer
+
+Version: ${_VERSION:-unknown}
 "
   exit 1
 }

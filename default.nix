@@ -40,8 +40,10 @@
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused findutils dhall-haskell ];
   atdBinPaths = with pkgs; lib.makeBinPath [ coreutils gnused bash jq dhall-haskell ];
 
+  version = "0.0.0";
+
   abi-to-dhall = pkgs.stdenv.mkDerivation {
-    name = "abi-to-dhall";
+    name = "abi-to-dhall-${version}";
     src = pkgs.lib.sourceByRegex ./. [
       ".*bin.*"
       ".*dhall.*"
@@ -59,11 +61,13 @@
 
       cp -r ./bin $out/bin
       wrapProgram $out/bin/abi-to-dhall \
+        --set _VERSION ${version} \
         --set PATH ${binPaths} \
         --set LIB_DIR $out/dhall \
         --set PRELUDE_PATH ${dhall-prelude}
 
       wrapProgram $out/bin/atd \
+        --set _VERSION ${version} \
         --prefix PATH : ${atdBinPaths}
 
       wrapProgram $out/bin/atd-to-seth \
