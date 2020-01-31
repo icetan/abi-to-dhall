@@ -33,6 +33,24 @@ let typeToDhallTypeLet
               , def = ([] : Def)
               }
 
+        let ${t.name}/hex =
+              λ(val : ${t.name})
+            → { _hex = "${backend.toHex
+                                  "${t.evm}"
+                                  "val._${t.group}"}"
+              --, size = $ {Natural/show t.size}
+              , def = val.def
+              }
+
+        let ${t.name}/fromHex =
+              λ(val : Hex)
+            → { _${t.group} = "${backend.fromHex
+                                  "${t.evm}"
+                                  "val._hex"}"
+              --, size = $ {Natural/show t.size}
+              , def = val.def
+              }
+
         let ${t.name}/output =
               λ(id : Text) → λ(x : ${t.name})
             → { _void = "${backend.toOutput "${t.evm}" "x._${t.group}"}"
@@ -55,6 +73,9 @@ let typeToDhallExport
 
         , ${t.name}/build = ${t.name}/build
         , ${t.name}List/build = ${t.name}List/build
+
+        , ${t.name}/hex = ${t.name}/hex
+        , ${t.name}/fromHex = ${t.name}/fromHex
 
         , evm/${t.evm} =
               λ(v : Text)
@@ -108,6 +129,8 @@ let typesToDhall
       → λ(ls : List ConvType)
       → ''
         let Def = List { mapKey : Natural, mapValue : Text }
+
+        let Hex = { _hex : Text, def : List Def } --, size : Natural }
 
         ${typesToDhallTypeLets backend ls}
 

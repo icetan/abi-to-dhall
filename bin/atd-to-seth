@@ -64,13 +64,12 @@ function op(node) {
     , send: n => `${estimate(n)}${sendAsync()}seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}${nonce()}`
     , call: n => `seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
     , create: n => `seth send --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
-    , naturalToUint256: n => `$(seth --to-uint256 "${n.naturalToUint256}")`
-    , integerToInt256: n => `$(seth --to-int256 "${n.integerToInt256}")`
-    , hexToBytes32: n => `$(seth --to-bytes32 "${op(n.hexToBytes32)}")`
+    , fromHex: n => `$(seth --to-${n.type} "${op(n.value)}")`
+    , toHex: n => `$(seth --to-${n.type} "${op(n.value)}")`
     , asciiToHex: n => `$(seth --from-ascii "${n.asciiToHex}")`
     , sig: n => `$(seth sig "${n.sig}")`
     , callDef: n => `\${_def_${n.callDef}}`
-    , lit: n => n.value
+    , lit: n => /^(u?int256|bytes32)$/.test(n.type) ? `$(seth --to-${n.type} "${n.value}")` : n.value
     , output: output
     }
 

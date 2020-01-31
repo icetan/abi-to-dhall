@@ -55,21 +55,10 @@ let defineMem
 
 let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "\"${Natural/show id}\""
 
-let hexToBytes32
-    : Hex.Type → TypeBase ⩓ { _bytes : Text }
-    = λ(hex : Hex.Type) → { _bytes = obj "hexToBytes32" hex._hex, def = ([] : Def) } --, size = 32 }
-
 let asciiToHex
     : Text → Hex.Type
     = λ(ascii : Text) → Hex::{ _hex = obj "asciiToHex" "\"${ascii}\"" }
 
-let naturalToUint256
-    : Natural → TypeBase ⩓ { _uint : Text }
-    = λ(nat : Natural) → { _uint = obj "naturalToUint256" "\"${Natural/show nat}\"", def = ([] : Def) } --, size = 32 }
-
-let integerToInt256
-    : Integer → TypeBase ⩓ { _int : Text }
-    = λ(int : Integer) → { _int = obj "integerToInt256" "\"${Integer/show int}\"", def = ([] : Def) } --, size = 32 }
 
 let sig : Text → Hex.Type = λ(t : Text) → Hex::{ _hex = obj "sig" "\"${t}\"" }
 
@@ -99,10 +88,7 @@ let renderUtil
       , defineMem = defineMem
       , callMem = callMem
       , sig = sig
-      , hexToBytes32 = hexToBytes32
       , asciiToHex = asciiToHex
-      , naturalToUint256 = naturalToUint256
-      , integerToInt256 = integerToInt256
       , render = toJSON
       }
 

@@ -9,7 +9,7 @@ let IntConv =
       , default = Conv::{
         , name = "Int"
         , group = "int"
-        , evm = "int"
+        , evm = "int256"
         --, size = 32
         , type = "Integer"
         , conv = "Integer/show"
@@ -21,7 +21,7 @@ let NatConv =
       , default = Conv::{
         , name = "Uint"
         , group = "uint"
-        , evm = "uint"
+        , evm = "uint256"
         --, size = 32
         , type = "Natural"
         , conv = "Natural/show"
@@ -33,7 +33,7 @@ let ByteConv =
       , default = Conv::{
         , name = "Bytes"
         , group = "bytes"
-        , evm = "bytes"
+        , evm = "bytes1"
         --, size = 1
         }
       }
@@ -49,7 +49,11 @@ let AddrConv =
       }
 
 in    [ Conv.default
-      --, Conv::{ name = "hex" }
+      , Conv::{
+          name = "Hex"
+        , group = "hex"
+        , evm = "hex"
+        }
       , Conv::{
           name = "Boolean"
         , group = "bool"
@@ -58,9 +62,9 @@ in    [ Conv.default
         , conv = "λ(b : Bool) → if b then \"true\" else \"false\""
         }
       , AddrConv.default
-      , ByteConv.default
-      , NatConv.default
-      , IntConv.default
+      --, ByteConv.default
+      --, NatConv.default
+      --, IntConv.default
       , Conv::{
           name = "String"
         , group = "string"

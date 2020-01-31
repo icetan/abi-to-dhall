@@ -46,20 +46,16 @@ let Output = schema.Output
 
 let Config = schema.Config
 
-let sig/mint =
-      atd.hexToBytes32 (atd.sig "mint(address,uint256)")
+let sig/mint = atd.sig "mint(address,uint256)"
 
-let sig/burn =
-      atd.hexToBytes32 (atd.sig "burn(address,uint256)")
+let sig/burn = atd.sig "burn(address,uint256)"
 
 let createToken
     : Optional Address → Module DSToken
     =   λ(tokenAddress : Optional Address)
       → Module/default
           DSToken
-          ( DSToken/create/bytes32
-              (atd.hexToBytes32 (atd.asciiToHex "EXAMPLE_TOKEN"))
-          )
+          (DSToken/create/bytes32 (atd.Bytes32/fromHex (atd.asciiToHex "EXAMPLE_TOKEN")))
           ( Optional/map
               Address
               DSToken
@@ -101,7 +97,7 @@ let guardModule
         → let send = Plan/build
             [ token.send/mint/address-uint256
                 guard.address
-                (atd.naturalToUint256 conf.mint)
+                (atd.Uint256/build conf.mint)
 
             , token.send/setAuthority/address
                 guard.address
@@ -109,12 +105,12 @@ let guardModule
             , guard.send/permit/address-address-bytes32
                 conf.auctionAddress
                 token.address
-                sig/mint
+                (atd.Bytes32/fromHex sig/mint)
 
             , guard.send/permit/address-address-bytes32
                 conf.auctionAddress
                 token.address
-                sig/burn
+                (atd.Bytes32/fromHex sig/burn)
             ]
 
           let output =

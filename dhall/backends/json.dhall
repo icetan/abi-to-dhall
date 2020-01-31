@@ -177,6 +177,18 @@ let toListLiteral
       → λ(expr : Text)
       → "{ \\\"op\\\": \\\"lit\\\", \\\"value\\\": [ \${./Prelude/Text/concatMapSep \", \" Text (λ(x : Text) → \"\\\"\${x}\\\"\") (${expr})} ], \\\"type\\\": \\\"${type}\\\" }"
 
+let toHex
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
+      → "{ \\\"op\\\": \\\"toHex\\\", \\\"type\\\": \\\"${type}\\\", \\\"value\\\": \${${expr}} }"
+
+let fromHex
+    : Text → Text → Text
+    =   λ(type : Text)
+      → λ(expr : Text)
+      → "{ \\\"op\\\": \\\"fromHex\\\", \\\"type\\\": \\\"${type}\\\", \\\"value\\\": \${${expr}} }"
+
 let backend : schema.Backend =
    { util =
         util
@@ -186,6 +198,10 @@ let backend : schema.Backend =
         toLiteral
     , toListLiteral =
         toListLiteral
+    , toHex =
+        toHex
+    , fromHex =
+        fromHex
     , sendValue =
         sendValue
     , sendDef =

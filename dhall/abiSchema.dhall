@@ -76,10 +76,7 @@ let BackendUtil
       , callMem : Natural → Text
       , concatDefs : List Def → Def
       , sig : Text → Hex.Type
-      , hexToBytes32 : Hex.Type → TypeBase ⩓ { _bytes : Text }
       , asciiToHex : Text → Hex.Type
-      , naturalToUint256 : Natural → TypeBase ⩓ { _uint : Text }
-      , integerToInt256 : Integer → TypeBase ⩓ { _int : Text }
       , render : List Void → Text
       }
 
@@ -94,6 +91,8 @@ let Backend
       , toOutput : Text → Text → Text
       , toLiteral : Text → Text → Text
       , toListLiteral : Text → Text → Text
+      , toHex : Text → Text → Text
+      , fromHex : Text → Text → Text
       , util : BackendUtil
       }
 
