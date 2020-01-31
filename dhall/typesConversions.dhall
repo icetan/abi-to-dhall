@@ -8,7 +8,7 @@ let IntConv =
       { Type = Conv.Type
       , default = Conv::{
         , name = "Int"
-        , group = "int"
+        , group = "int256"
         , evm = "int256"
         --, size = 32
         , type = "Integer"
@@ -20,7 +20,7 @@ let NatConv =
       { Type = Conv.Type
       , default = Conv::{
         , name = "Uint"
-        , group = "uint"
+        , group = "uint256"
         , evm = "uint256"
         --, size = 32
         , type = "Natural"
@@ -84,6 +84,7 @@ in    [ Conv.default
 
             in  ByteConv::{
                 , name = "Bytes${suf}"
+                , group = "bytes${suf}"
                 , evm = "bytes${suf}"
                 --, size = i + 1
                 }
@@ -97,6 +98,7 @@ in    [ Conv.default
 
             in  NatConv::{
                 , name = "Uint${suf}"
+                , group = "uint${suf}"
                 , evm = "uint${suf}"
                 --, size = i + 1
                 }
@@ -108,6 +110,11 @@ in    [ Conv.default
         (   λ(i : Natural)
           → let suf = Natural/show (i * 8 + 8)
 
-            in  IntConv::{ name = "Int${suf}", evm = "int${suf}" } --, size = i + 1 }
+            in  IntConv::{
+                , name = "Int${suf}"
+                , group = "int${suf}"
+                , evm = "int${suf}"
+                --, size = i + 1 }
+                }
         )
         (Natural/enumerate 32)
