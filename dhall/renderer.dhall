@@ -1,10 +1,10 @@
-let Text/concatMapSep = ../../Prelude/Text/concatMapSep
+let Text/concatMapSep = ./Prelude/Text/concatMapSep
 
-let Text/concatSep = ../../Prelude/Text/concatSep
+let Text/concatSep = ./Prelude/Text/concatSep
 
-let List/map = ../../Prelude/List/map
+let List/map = ./Prelude/List/map
 
-let schema = ../../abiSchema.dhall
+let schema = ./abiSchema.dhall
 
 let Hex = schema.Hex
 
@@ -16,7 +16,7 @@ let DefEntry = schema.DefEntry
 
 let TypeBase = schema.TypeBase
 
-let utils = ../../utils.dhall
+let utils = ./utils.dhall
 
 let concatDefs = utils.concatDefs
 
@@ -59,7 +59,6 @@ let asciiToHex
     : Text → Hex.Type
     = λ(ascii : Text) → Hex::{ _hex = obj "asciiToHex" "\"${ascii}\"" }
 
-
 let sig : Text → Hex.Type = λ(t : Text) → Hex::{ _hex = obj "sig" "\"${t}\"" }
 
 let toJSON
@@ -82,8 +81,8 @@ let toJSON
         }
         ''
 
-let renderUtil
-    : schema.BackendUtil
+let renderer
+    : schema.Renderer
     = { concatDefs = concatDefs
       , defineMem = defineMem
       , callMem = callMem
@@ -92,4 +91,4 @@ let renderUtil
       , render = toJSON
       }
 
-in  renderUtil
+in  renderer

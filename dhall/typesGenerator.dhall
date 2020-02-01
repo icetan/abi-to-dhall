@@ -1,17 +1,16 @@
 let Text/concatMapSep = ./Prelude/Text/concatMapSep
 
-let Backend = (./abiSchema.dhall).Backend
-
 let Helper = ./typesHelper.dhall
 
 let ConvType = Helper.Conv.Type
 
+let backend = ./backend.dhall
+
 let concatMapConvType = Text/concatMapSep "\n" ConvType
 
 let typeToDhallTypeLet
-    : Backend → ConvType → Text
-    =   λ(backend : Backend)
-      → λ(t : ConvType)
+    : ConvType → Text
+    =   λ(t : ConvType)
       → ''
         let ${t.name} = { _${t.group} : Text, def : Def } -- size : Natural, 
         let ${t.name}List = { _${t.group}_list : Text, def : Def } -- size : Natural, 
@@ -64,9 +63,8 @@ let typeToDhallTypeLet
         ''
 
 let typeToDhallExport
-    : Backend → ConvType → Text
-    =   λ(backend : Backend)
-      → λ(t : ConvType)
+    : ConvType → Text
+    =   λ(t : ConvType)
       → ''
         , ${t.name} = ${t.name}
         , ${t.name}List = ${t.name}List
@@ -104,37 +102,34 @@ let typeToDhallExport
         ''
 
 let typesToDhallTypeLets
-    : Backend → List ConvType → Text
-    =   λ(backend : Backend)
-      → λ(ls : List ConvType)
+    : List ConvType → Text
+    =   λ(ls : List ConvType)
       → "${Text/concatMapSep
                "\n"
                ConvType
-               (typeToDhallTypeLet backend)
+               typeToDhallTypeLet
                ls}"
 
 let typesToDhallExports
-    : Backend → List ConvType → Text
-    =   λ(backend : Backend)
-      → λ(ls : List ConvType)
+    : List ConvType → Text
+    =   λ(ls : List ConvType)
       → "{ ${Text/concatMapSep
                "\n"
                ConvType
-               (typeToDhallExport backend)
+               typeToDhallExport
                ls} }"
 
 let typesToDhall
-    : Backend → List ConvType → Text
-    =   λ(backend : Backend)
-      → λ(ls : List ConvType)
+    : List ConvType → Text
+    =   λ(ls : List ConvType)
       → ''
         let Def = List { mapKey : Natural, mapValue : Text }
 
         let Hex = { _hex : Text, def : List Def } --, size : Natural }
 
-        ${typesToDhallTypeLets backend ls}
+        ${typesToDhallTypeLets ls}
 
-        in ${typesToDhallExports backend ls}
+        in ${typesToDhallExports ls}
         ''
 
 in  typesToDhall
