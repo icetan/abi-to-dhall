@@ -10,6 +10,8 @@ let List/filter = ./Prelude/List/filter
 
 let schema = ./abiSchema.dhall
 
+let backend = ./backend.dhall
+
 let FunArg = schema.FunArg
 
 let SimpleArg = schema.SimpleArg
@@ -119,9 +121,8 @@ let funSignature
         ++  funArgsSignature args
 
 let createFunType
-    : schema.Backend → Text → schema.Constructor → Text
-    =   λ(backend : schema.Backend)
-      → λ(name : Text)
+    : Text → schema.Constructor → Text
+    =   λ(name : Text)
       → λ(constructor : schema.Constructor)
       → ''
         ${funSignature [ "create" ] constructor.inputs} :
@@ -133,9 +134,8 @@ let createFunType
         ''
 
 let createFun
-    : schema.Backend → Text → schema.Constructor → Text
-    =   λ(backend : schema.Backend)
-      → λ(name : Text)
+    : Text → schema.Constructor → Text
+    =   λ(name : Text)
       → λ(constructor : schema.Constructor)
       → ''
         ${funSignature [ "create" ] constructor.inputs} =
@@ -154,9 +154,8 @@ let createFun
         ''
 
 let sendType
-    : schema.Backend → schema.Fun → Text
-    =   λ(backend : schema.Backend)
-      → λ(fun : schema.Fun)
+    : schema.Fun → Text
+    =   λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} :
               ${funArgsToDhallFun "∀" fun.inputs}
@@ -164,9 +163,8 @@ let sendType
         ''
 
 let send
-    : schema.Backend → schema.Fun → Text
-    =   λ(backend : schema.Backend)
-      → λ(fun : schema.Fun)
+    : schema.Fun → Text
+    =   λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
               ${funArgsToDhallFun "λ" fun.inputs}
@@ -177,9 +175,8 @@ let send
         ''
 
 let callType
-    : schema.Backend → schema.Fun → Text
-    =   λ(backend : schema.Backend)
-      → λ(fun : schema.Fun)
+    : schema.Fun → Text
+    =   λ(fun : schema.Fun)
       → ''
         ${funSignature [ "call", fun.name ] fun.inputs} :
             ${funArgsToDhallFun "∀" fun.inputs}
@@ -193,9 +190,8 @@ let callType
         ''
 
 let call
-    : schema.Backend → schema.Fun → Text
-    =   λ(backend : schema.Backend)
-      → λ(fun : schema.Fun)
+    : schema.Fun → Text
+    =   λ(fun : schema.Fun)
       → let  returnType = funReturnToDhallType fun.outputs
         in
         ''
@@ -224,37 +220,34 @@ let defaultConstructor =
         }
 
 let abiOpToDhallType
-    : schema.Backend → Text → schema.Op → Text
-    =   λ(backend : schema.Backend)
-      → λ(name : Text)
+    : Text → schema.Op → Text
+    =   λ(name : Text)
       → λ(op : schema.Op)
       → merge
           { Function =
-              λ(fun : schema.Fun) → "${sendType backend fun}\n, ${callType backend fun}"
+              λ(fun : schema.Fun) → "${sendType fun}\n, ${callType fun}"
           , Fallback = λ(fallback : schema.Fallback) → "fallback : {}"
           , Event = λ(event : schema.Event) → "event/${event.name} : {}"
-          , Constructor = createFunType backend name
+          , Constructor = createFunType name
           }
           op
 
 let abiOpToDhall
-    : schema.Backend → Text → schema.Op → Text
-    =   λ(backend : schema.Backend)
-      → λ(name : Text)
+    : Text → schema.Op → Text
+    =   λ(name : Text)
       → λ(op : schema.Op)
       → merge
           { Function =
-              λ(fun : schema.Fun) → "${send backend fun}\n, ${call backend fun}"
+              λ(fun : schema.Fun) → "${send fun}\n, ${call fun}"
           , Fallback = λ(fallback : schema.Fallback) → "fallback = {=}"
           , Event = λ(event : schema.Event) → "event/${event.name} = {=}"
-          , Constructor = createFun backend name
+          , Constructor = createFun name
           }
           op
 
 let abiToDhall
-    : schema.Backend → Text → Text → schema.Abi → Text
-    =   λ(backend : schema.Backend)
-      → λ(prefix : Text)
+    : Text → Text → schema.Abi → Text
+    =   λ(prefix : Text)
       → λ(name : Text)
       → λ(ops : schema.Abi)
       → ''
@@ -274,7 +267,7 @@ let abiToDhall
 
         let Plan = lib.Plan
 
-        let backend = ./backend
+        let renderer = ./renderer
 
         let prefix = "${prefix}"
 
@@ -285,7 +278,7 @@ let abiToDhall
             = { address : types.Address
                 ${Text/concatMap
                   schema.Op
-                  (λ(op : schema.Op) → ", " ++ (abiOpToDhallType backend name op))
+                  (λ(op : schema.Op) → ", " ++ (abiOpToDhallType name op))
                   (List/filter schema.Op isntConstructor ops)
                   }
               }
@@ -296,7 +289,7 @@ let abiToDhall
             → { address = address
                 ${Text/concatMap
                   schema.Op
-                  (λ(op : schema.Op) → ", " ++ (abiOpToDhall backend name op))
+                  (λ(op : schema.Op) → ", " ++ (abiOpToDhall name op))
                   (List/filter schema.Op isntConstructor ops)
                   }
               }
@@ -308,7 +301,7 @@ let abiToDhall
 
                 , ${name}/''
                 schema.Op
-                (abiOpToDhall backend name)
+                (abiOpToDhall name)
                 ( if hasConstructor ops
                   then  (List/filter schema.Op isConstructor ops)
                   else  [ defaultConstructor ]

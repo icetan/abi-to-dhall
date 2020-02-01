@@ -67,11 +67,10 @@
     buildPhase = "true";
     installPhase = ''
       export XDG_CACHE_HOME="$PWD/.cache"
-      mkdir -p $out/dhall/backends "XDG_CACHE_HOME"
+      mkdir -p $out/dhall "XDG_CACHE_HOME"
 
       ln -sf ${dhall-prelude} ./dhall/Prelude
       dhall <<<"./dhall/package.dhall" > $out/dhall/package.dhall
-      dhall <<<"./dhall/backends/json.dhall" > $out/dhall/backends/json.dhall
 
       cp -r ./bin $out/bin
       wrapProgram $out/bin/abi-to-dhall \

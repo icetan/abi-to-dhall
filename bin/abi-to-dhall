@@ -16,10 +16,6 @@ Options:
   --namespace NAME
           Name of solidity package, used to avoid conflicts
 
-Depricated options:
-  --backend BACKEND
-          Select a backend renderer
-
 Version: ${_VERSION:-unknown}
 "
   exit 1
@@ -48,7 +44,7 @@ gen() {
     sed 's/\[[0-9]*\]"/_list"/g' "$abiPath" \
       | json-to-dhall --records-strict --unions-first "($PACKAGE_PATH).abiSchema.Abi" \
       > "$abiDhall" \
-    && dhall text <<<"($PACKAGE_PATH).abiGenerator $BACKEND_PATH \"$BIN_PREFIX\" \"$contractName\" $abiDhall" \
+    && dhall text <<<"($PACKAGE_PATH).abiGenerator \"$BIN_PREFIX\" \"$contractName\" $abiDhall" \
       | dhall format > "$OUT_CON_DIR/$contractName"
   }; then
     {
@@ -70,14 +66,14 @@ updatePackage() {
            ! -path "*/Prelude/*" \
       -and ! -name lib \
       -and ! -name types \
-      -and ! -name backend \
+      -and ! -name renderer \
     | sed 's|^\([^/]*\)/\(.*\)/\([^/]*\)$|/\\ { \2 = ./\1/\2/\3 }|'
   )
 
   rm -rf "$OUT_LIB_DIR/package"
   dhall format <<<"
     { contracts = {=} $contracts
-    } // ./lib // ./backend // ./types
+    } // ./lib // ./renderer // ./types
   " > "$OUT_LIB_DIR/package"
 }
 
@@ -92,14 +88,12 @@ main() {
   dhall <<<"($PACKAGE_PATH).lib" > "$OUT_LIB_DIR/lib"
   ln -srfT "$OUT_LIB_DIR/lib" "$OUT_CON_DIR/lib"
 
-  dhall <<<"($BACKEND_PATH).util" > "$OUT_LIB_DIR/backend"
-  ln -srfT "$OUT_LIB_DIR/backend" "$OUT_CON_DIR/backend"
+  dhall <<<"($PACKAGE_PATH).renderer" > "$OUT_LIB_DIR/renderer"
+  ln -srfT "$OUT_LIB_DIR/renderer" "$OUT_CON_DIR/renderer"
 
-  dhall text <<<"($PACKAGE_PATH).typesGenerator $BACKEND_PATH ($PACKAGE_PATH).typesConversions" \
+  dhall text <<<"($PACKAGE_PATH).typesGenerator ($PACKAGE_PATH).typesConversions" \
     | dhall format > "$OUT_LIB_DIR/types"
   ln -srfT "$OUT_LIB_DIR/types" "$OUT_CON_DIR/types"
-
-  echo "\"${BACKEND_NAME}\"" > "$OUT_LIB_DIR/.backend"
 
   for fn in "$@"; do gen "$fn"; done
 
@@ -108,9 +102,6 @@ main() {
 
 while [ "$1" ]; do
   case "$1" in
-    --backend) shift
-      ATD_BACKEND="$1"
-      ;;
     --module) shift
       ATD_MODULE="${1//[-\/ ]/_}"
       ;;
@@ -138,14 +129,6 @@ fi
 LIB_DIR=$(cd "${LIB_DIR:-${0%/*}/../dhall}" && pwd)
 PRELUDE_PATH=$(cd "${PRELUDE_PATH:-${0%/*}/../dhall-lang/Prelude}" && pwd)
 PACKAGE_PATH="$LIB_DIR/package.dhall"
-ATD_BACKEND=${ATD_BACKEND:-json}
-if [[ $ATD_BACKEND =~ / ]]; then
-  BACKEND_PATH=$(filepath "$ATD_BACKEND")
-else
-  BACKEND_PATH=$(filepath "$LIB_DIR/backends/$ATD_BACKEND.dhall")
-fi
-BACKEND_NAME="${BACKEND_PATH##*/}"
-BACKEND_NAME="${BACKEND_NAME%.*}"
 
 OUT_DIR="$PWD/atd"
 OUT_LIB_DIR="$OUT_DIR"

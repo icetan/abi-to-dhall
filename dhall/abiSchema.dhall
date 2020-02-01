@@ -70,7 +70,7 @@ let Void
     : Type
     = TypeBase ⩓ { _void : Text }
 
-let BackendUtil
+let Renderer
     : Type
     = { defineMem : Natural → Text → Def
       , callMem : Natural → Text
@@ -93,7 +93,6 @@ let Backend
       , toListLiteral : Text → Text → Text
       , toHex : Text → Text → Text
       , fromHex : Text → Text → Text
-      , util : BackendUtil
       }
 
 in  { Abi = Abi
@@ -108,7 +107,7 @@ in  { Abi = Abi
     , SimpleArgV2 = SimpleArgV2
     , ComplexArg = ComplexArg
     , ComplexArgV2 = ComplexArgV2
-    , BackendUtil = BackendUtil
+    , Renderer = Renderer
     , Backend = Backend
     , TypeBase = TypeBase
     , Hex = Hex

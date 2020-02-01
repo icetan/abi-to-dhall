@@ -201,8 +201,6 @@ astArgs() {
 
   [[ -n $expression ]] || usage "No Dhall expression or file given."
   [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command."
-  [[ $(cat ./atd/.backend) == "\"json\"" ]] \
-    || usage "$(cat ./atd/.backend) is not a compatible backend, only 'json' is supported."
 
   #if [[ -n $stateExpr ]]; then
   #  expression+=" $stateExpr"

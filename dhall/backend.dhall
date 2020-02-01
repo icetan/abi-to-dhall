@@ -1,17 +1,10 @@
-let Text/concatMapSep =
-        ../Prelude/Text/concatMapSep
-      ? https://prelude.dhall-lang.org/Text/concatMapSep
+let Text/concatMapSep = ./Prelude/Text/concatMapSep
 
-let Text/concatSep =
-      ../Prelude/Text/concatSep ? https://prelude.dhall-lang.org/Text/concatSep
+let Text/concatSep = ./Prelude/Text/concatSep
 
-let List/map =
-        ../Prelude/List/map
-      ? https://prelude.dhall-lang.org/List/map
+let List/map = ./Prelude/List/map
 
-let schema = ../abiSchema.dhall
-
-let util = ./util/json.dhall
+let schema = ./abiSchema.dhall
 
 let obj : Text → Text → Text = λ(id : Text) → λ(code : Text) → "{ \"${id}\": ${code} }"
 
@@ -77,7 +70,7 @@ let funArgNamesToDhallConcatDefs
     : List Text → List Text → Text
     =   λ(names : List Text)
       → λ(extra : List Text)
-      → "(backend.concatDefs ([ ${Text/concatSep
+      → "(renderer.concatDefs ([ ${Text/concatSep
                                     ", "
                                     (   List/map
                                           Text
@@ -118,7 +111,7 @@ let sendDef =
           ([ "address" ] # funArgsToDhallArgNames fun.inputs)
           ([] : List Text)
 
-let callValue = λ(fun : Fun) → "backend.callMem tag"
+let callValue = λ(fun : Fun) → "renderer.callMem tag"
 
 let callDef =
         λ ( fun
@@ -127,7 +120,7 @@ let callDef =
       → funArgNamesToDhallConcatDefs
           ([ "address" ] # funArgsToDhallArgNames fun.inputs)
           [ ''
-            (backend.defineMem tag ${"''"}
+            (renderer.defineMem tag ${"''"}
             {
               "op": "call",
               "address": ''${address._address},
@@ -139,7 +132,7 @@ let callDef =
             ${"''"})''
           ]
 
-let createValue = λ(constructor : Constructor) → "backend.callMem tag"
+let createValue = λ(constructor : Constructor) → "renderer.callMem tag"
 
 let createDef =
         λ ( constructor
@@ -148,7 +141,7 @@ let createDef =
       → funArgNamesToDhallConcatDefs
           (funArgsToDhallArgNames constructor.inputs)
           [ ''
-            (backend.defineMem tag ${"''"}
+            (renderer.defineMem tag ${"''"}
             {
               "op": "create",
               "prefix": "${"\${prefix}"}",
@@ -190,9 +183,7 @@ let fromHex
       → "{ \\\"op\\\": \\\"fromHex\\\", \\\"type\\\": \\\"${type}\\\", \\\"value\\\": \${${expr}} }"
 
 let backend : schema.Backend =
-   { util =
-        util
-    , toOutput =
+   { toOutput =
         toOutput
     , toLiteral =
         toLiteral
