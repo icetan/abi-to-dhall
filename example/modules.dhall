@@ -103,12 +103,12 @@ let guardModule
                 guard.address
 
             , guard.send/permit/address-address-bytes32
-                conf.auctionAddress
+                (Address/build conf.auctionAddress)
                 token.address
                 (atd.Bytes32/fromHex sig/mint)
 
             , guard.send/permit/address-address-bytes32
-                conf.auctionAddress
+                (Address/build conf.auctionAddress)
                 token.address
                 (atd.Bytes32/fromHex sig/burn)
             ]
