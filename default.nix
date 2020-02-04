@@ -54,7 +54,7 @@
   binPaths = with pkgs; lib.makeBinPath [ coreutils gnused findutils dhall-haskell ];
   atdBinPaths = with pkgs; lib.makeBinPath [ coreutils gnused bash jq dhall-haskell ];
 
-  version = "0.0.0";
+  version = "0.0.1";
 
   abi-to-dhall = pkgs.stdenv.mkDerivation {
     name = "abi-to-dhall-${version}";
