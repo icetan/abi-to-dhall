@@ -98,6 +98,8 @@ let sendValue =
         {
           "op": "send",
           "address": ''${address._address},
+          "prefix": "''${prefix}",
+          "contract": "''${name}",
           "function": "${fun.name}",
           "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
           "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
@@ -124,6 +126,8 @@ let callDef =
             {
               "op": "call",
               "address": ''${address._address},
+              "prefix": "''${prefix}",
+              "contract": "''${name}",
               "function": "${fun.name}",
               "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
               "args":     [ ${funArgsToDhallFunValue fun.inputs} ],
@@ -144,8 +148,8 @@ let createDef =
             (renderer.defineMem tag ${"''"}
             {
               "op": "create",
-              "prefix": "${"\${prefix}"}",
-              "contract": "${"\${name}"}",
+              "prefix": "''${prefix}",
+              "contract": "''${name}",
               "argTypes": [ ${funArgsToDhallCall constructor.inputs} ],
               "args": [ ${funArgsToDhallFunValue constructor.inputs} ]
             }
