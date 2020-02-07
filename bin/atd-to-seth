@@ -5,7 +5,7 @@ const { spawn } = require('child_process');
 const command = process.argv[2]
 const opts = process.argv.slice(3)
 const enableEstimates = opts.indexOf("--estimate") !== -1
-const enableNonce = opts.indexOf("--nonce") !== -1
+const enableAsync = opts.indexOf("--async") !== -1
 
 function error(msg) {
   console.error(`Error: ${msg}`)
@@ -55,21 +55,27 @@ function estimate(node) {
 }
 
 function nonce() {
-  return enableNonce ? "\nETH_NONCE=$((ETH_NONCE + 1))" : ""
+  return enableAsync ? "\nETH_NONCE=$((ETH_NONCE + 1))" : ""
 }
 
 function sendAsync() {
-  return enableNonce ? "SETH_ASYNC=yes " : ""
+  return enableAsync ? "SETH_ASYNC=yes " : ""
+}
+
+function callDef(node) {
+  return (enableAsync && node.opType === "create")
+    ? `$(seth receipt "\${_def_${node.callDef}}" contractAddress)`
+    : `\${_def_${node.callDef}}`
 }
 
 function op(node) {
   const parse =
     { def: n => `${estimate(n.def)}_def_${n.id}=$(${op(n.def)})${nonce()}`
-    , send: n => `${estimate(n)}${sendAsync()}seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}${nonce()}`
-    , call: n => `seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
-    , create: n => `seth send --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
+    , send: n => `${estimate(n)}${sendAsync()}seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
+    , call: n => `${sendAsync()}seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
+    , create: n => `${sendAsync()}seth send --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , sig: n => `$(seth sig "${n.sig}")`
-    , callDef: n => `\${_def_${n.callDef}}`
+    , callDef: callDef
     , asciiToHex: n => `$(seth --from-ascii "${n.asciiToHex}")`
     , fromHex: n => (
         truncWarn(`Expression '${op(n.value)}' might be truncated when cast to '${n.type}'.`),
@@ -77,6 +83,7 @@ function op(node) {
     , toHex: n => /^(u?int256|bytes32)$/.test(n.type) ? `$(seth --to-${n.type} "${op(n.value)}")` : op(n.value)
     , lit: n => /^(u?int256|bytes32)$/.test(n.type) ? `$(seth --to-${n.type} "${n.value}")` : n.value
     , output: output
+    , noop: _ => null
     }
 
   if (!(node.op in parse))
@@ -104,11 +111,11 @@ enableEstimates ? `
   }
 }"; } 2>/dev/null' EXIT
 set -ex${
-enableNonce ? `
+enableAsync ? `
 
 export ETH_NONCE=$(seth nonce "$ETH_FROM")` : ""}
 
-${ops.join("\n")}`
+${ops.filter(o => o != null).join("\n")}`
 }
 
 const data = fs.readFileSync(0, 'utf-8')
