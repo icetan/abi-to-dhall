@@ -43,6 +43,10 @@ in pkgs.mkShell {
       run-example-atd "run seth --args --estimate ;" "$@"
     }
 
+    example-run-async() {
+      run-example-atd "run seth --args --async ;" "$@"
+    }
+
     example-print-seth() {
       run-example-atd "print seth" "$@"
     }

@@ -94,7 +94,7 @@ let guardModule
         → createGuard (optionalAddress input.guardAddress)
             (λ(guard : DSGuard)
 
-        → let send = Plan/build
+        → let send = Plan/concat
             [ token.send/mint/address-uint256
                 guard.address
                 (atd.Uint256/build conf.mint)

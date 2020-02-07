@@ -102,10 +102,12 @@ let plan
       → DSGuard/create
           (λ(guard : DSGuard)
 
-      → atd.Plan/build
+      → atd.Plan/concat
             [ token.send/setAuthority/address guard.address
-            , (atd.Address/output "TOKEN" token.address)
-            , (atd.Address/output "GUARD" guard.address)
+            , atd.Plan/build
+              [ (atd.Address/output "TOKEN" token.address)
+              , (atd.Address/output "GUARD" guard.address)
+              ]
             ]
       ))
 in atd.render (atd.Plan/run plan)
