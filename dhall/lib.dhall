@@ -24,6 +24,10 @@ let Void
     : Type
     = { _void : Text, def : Def } -- size : Natural,
 
+let Math
+    : Type
+    = { _math : Text, def : Def } -- size : Natural,
+
 let ethToWei
     : Natural → Natural
     = λ(eth : Natural) → eth * 1000000000000000000
@@ -206,6 +210,7 @@ in  { ethToWei = ethToWei
     , ethToGWei = ethToGWei
     , pow = pow
     , Void = Void
+    , Math = Math
     , Def = Def
     , DefEntry = DefEntry
     , Run = Run

@@ -84,7 +84,7 @@
         --prefix PATH : ${atdBinPaths}
 
       wrapProgram $out/bin/atd-to-seth \
-        --prefix PATH : ${with pkgs; lib.makeBinPath [ bash ]}
+        --prefix PATH : ${with pkgs; lib.makeBinPath [ bash bc ]}
     '';
     passthru = {
       buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit abi-to-dhall; };

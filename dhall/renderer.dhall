@@ -12,6 +12,8 @@ let Address = schema.Address
 
 let Void = schema.Void
 
+let Math = schema.Math
+
 let Def = schema.Def
 
 let DefEntry = schema.DefEntry
@@ -43,6 +45,23 @@ let obj
         { "op": "${id}", "${id}": ${code} }
         ''
 
+let math
+    : Text → Math.Type → Text
+    =   λ(op : Text)
+      → λ(x : Math.Type)
+      → ''
+        { "op": "math", "mathOp": "${op}", "x": ${x._math} }
+        ''
+
+let math2
+    : Text → Math.Type → Math.Type → Text
+    =   λ(op : Text)
+      → λ(x : Math.Type)
+      → λ(y : Math.Type)
+      → ''
+        { "op": "math", "mathOp": "${op}", "x": ${x._math}, "y": ${y._math} }
+        ''
+
 let noop : Natural → Text = λ(id : Natural) → obj "noop" "\"${Natural/show id}\""
 
 let defineMem
@@ -71,6 +90,48 @@ let asciiToHex
 let sig : Text → Hex.Type = λ(t : Text) → Hex::{ _hex = obj "sig" "\"${t}\"" }
 
 let from = Address::{ _address = "{ \"op\": \"from\", \"type\": \"address\" }" }
+
+let num
+    =   λ(x : Natural)
+      → Math::{ _math = Natural/show x }
+
+let numToHex
+    =   λ(scale : Natural)
+      → λ(x : Math.Type)
+      → Hex::{ _hex = "{ \"op\": \"mathToHex\", \"scale\": ${Natural/show scale}, \"value\": ${x._math} }" }
+
+let add
+    =   λ(x : Math.Type)
+      → λ(y : Math.Type)
+      → Math::{ _math = math2 "add" x y }
+
+let sub
+    =   λ(x : Math.Type)
+      → λ(y : Math.Type)
+      → Math::{ _math = math2 "sub" x y }
+
+let mul
+    =   λ(x : Math.Type)
+      → λ(y : Math.Type)
+      → Math::{ _math = math2 "mul" x y }
+
+let div
+    =   λ(x : Math.Type)
+      → λ(y : Math.Type)
+      → Math::{ _math = math2 "div" x y }
+
+let pow
+    =   λ(x : Math.Type)
+      → λ(y : Math.Type)
+      → Math::{ _math = math2 "pow" x y }
+
+let log
+    =   λ(x : Math.Type)
+      → Math::{ _math = math "log" x }
+
+let exp
+    =   λ(x : Math.Type)
+      → Math::{ _math = math "exp" x }
 
 let toJSON
     : List Void → Text
@@ -101,6 +162,15 @@ let renderer
       , sig = sig
       , asciiToHex = asciiToHex
       , from = from
+      , num = num
+      , numToHex = numToHex
+      , add = add
+      , sub = sub
+      , mul = mul
+      , div = div
+      , pow = pow
+      , log = log
+      , exp = exp
       , render = toJSON
       }
 

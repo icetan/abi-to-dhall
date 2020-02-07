@@ -75,6 +75,11 @@ let Void
     : Type
     = TypeBase ⩓ { _void : Text }
 
+let Math =
+      { Type = TypeBase ⩓ { _math : Text }
+      , default = { _math = "0", def = [] : Def } -- size = 32,
+      }
+
 let Renderer
     : Type
     = { defineMem : Natural → Text → Def
@@ -84,6 +89,15 @@ let Renderer
       , sig : Text → Hex.Type
       , asciiToHex : Text → Hex.Type
       , from : Address.Type
+      , num : Natural → Math.Type
+      , numToHex : Natural → Math.Type → Hex.Type
+      , add : Math.Type → Math.Type → Math.Type
+      , sub : Math.Type → Math.Type → Math.Type
+      , mul : Math.Type → Math.Type → Math.Type
+      , div : Math.Type → Math.Type → Math.Type
+      , pow : Math.Type → Math.Type → Math.Type
+      , log : Math.Type → Math.Type
+      , exp : Math.Type → Math.Type
       , render : List Void → Text
       }
 
@@ -118,6 +132,7 @@ in  { Abi = Abi
     , Backend = Backend
     , TypeBase = TypeBase
     , Hex = Hex
+    , Math = Math
     , Address = Address
     , Void = Void
     , DefEntry = DefEntry
