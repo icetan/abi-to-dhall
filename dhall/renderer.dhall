@@ -43,6 +43,8 @@ let obj
         { "op": "${id}", "${id}": ${code} }
         ''
 
+let noop : Natural → Text = λ(id : Natural) → obj "noop" "\"${Natural/show id}\""
+
 let defineMem
     : Natural → Text → Def
     =   λ(id : Natural)
@@ -53,7 +55,14 @@ let defineMem
           }
         ]
 
-let callMem : Natural → Text = λ(id : Natural) → obj "callDef" "\"${Natural/show id}\""
+let callMem
+    : Natural → Text → Text → Text
+    =   λ(id : Natural)
+      → λ(op : Text)
+      → λ(type : Text)
+      → ''
+        { "op": "callDef", "callDef": "${Natural/show id}", "opType": "${op}", "type": ${type} }
+        ''
 
 let asciiToHex
     : Text → Hex.Type
@@ -84,6 +93,7 @@ let toJSON
 let renderer
     : schema.Renderer
     = { concatDefs = concatDefs
+      , noop = noop
       , defineMem = defineMem
       , callMem = callMem
       , sig = sig

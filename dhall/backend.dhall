@@ -89,31 +89,51 @@ let funArgsToDhallArgNames
         (λ(iarg : SimpleIArg) → "arg${Natural/show iarg.index}")
         (List/indexed SimpleArg (toSimpleArgs args))
 
-let sendValue =
+--let sendValue =
+--        λ ( fun
+--          : Fun
+--          )
+--      → ''
+--        ${"''"}
+--        {
+--          "op": "send",
+--          "address": ''${address._address},
+--          "prefix": "''${prefix}",
+--          "contract": "''${name}",
+--          "function": "${fun.name}",
+--          "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
+--          "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
+--        }
+--        ${"''"}
+--        ''
+let sendValue = λ(fun : Fun) → "renderer.noop tag"
+
+--let sendDef =
+--        λ(fun : Fun)
+--      → funArgNamesToDhallConcatDefs
+--          ([ "address" ] # funArgsToDhallArgNames fun.inputs)
+--          ([] : List Text)
+let sendDef =
         λ ( fun
           : Fun
           )
-      → ''
-        ${"''"}
-        {
-          "op": "send",
-          "address": ''${address._address},
-          "prefix": "''${prefix}",
-          "contract": "''${name}",
-          "function": "${fun.name}",
-          "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
-          "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
-        }
-        ${"''"}
-        ''
-
-let sendDef =
-        λ(fun : Fun)
       → funArgNamesToDhallConcatDefs
           ([ "address" ] # funArgsToDhallArgNames fun.inputs)
-          ([] : List Text)
+          [ ''
+            (renderer.defineMem tag ${"''"}
+            {
+              "op": "send",
+              "address": ''${address._address},
+              "prefix": "''${prefix}",
+              "contract": "''${name}",
+              "function": "${fun.name}",
+              "argTypes": [ ${funArgsToDhallCall fun.inputs} ],
+              "args":     [ ${funArgsToDhallFunValue fun.inputs} ]
+            }
+            ${"''"})''
+          ]
 
-let callValue = λ(fun : Fun) → "renderer.callMem tag"
+let callValue = λ(fun : Fun) → "renderer.callMem tag \"call\" ''\n[ ${funArgsToDhallCall fun.outputs} ]''"
 
 let callDef =
         λ ( fun
@@ -136,7 +156,7 @@ let callDef =
             ${"''"})''
           ]
 
-let createValue = λ(constructor : Constructor) → "renderer.callMem tag"
+let createValue = λ(constructor : Constructor) → "renderer.callMem tag \"create\" \"\\\"address\\\"\" "
 
 let createDef =
         λ ( constructor

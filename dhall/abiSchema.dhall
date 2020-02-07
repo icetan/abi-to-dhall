@@ -73,7 +73,8 @@ let Void
 let Renderer
     : Type
     = { defineMem : Natural → Text → Def
-      , callMem : Natural → Text
+      , noop : Natural → Text
+      , callMem : Natural → Text → Text → Text
       , concatDefs : List Def → Def
       , sig : Text → Hex.Type
       , asciiToHex : Text → Hex.Type

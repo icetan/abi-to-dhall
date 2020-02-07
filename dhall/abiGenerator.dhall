@@ -158,8 +158,10 @@ let sendType
     =   λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} :
-              ${funArgsToDhallFun "∀" fun.inputs}
-              Void
+            ${funArgsToDhallFun "∀" fun.inputs}
+            ∀(next : SinglePlan)
+          → ∀(tag : Natural)
+          → Run
         ''
 
 let send
@@ -167,11 +169,13 @@ let send
     =   λ(fun : schema.Fun)
       → ''
         ${funSignature [ "send", fun.name ] fun.inputs} =
-              ${funArgsToDhallFun "λ" fun.inputs}
-              (types.evm/void
+            ${funArgsToDhallFun "λ" fun.inputs}
+            λ(next : SinglePlan)
+          → λ(tag : Natural)
+          → [ (types.evm/void
                 (${backend.sendValue fun})
-                (${backend.sendDef fun})
-              )
+                (${backend.sendDef fun}))
+            ] # next (tag + 1)
         ''
 
 let callType
