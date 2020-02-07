@@ -63,9 +63,13 @@ function sendAsync() {
 }
 
 function callDef(node) {
+  const f =
+    n => (n.type === "address" || n.type[0] === "address")
+      ? `0x\${_def_${n.callDef}#0x}`
+      : `\${_def_${n.callDef}}`
   return (enableAsync && node.opType === "create")
-    ? `$(seth receipt "\${_def_${node.callDef}}" contractAddress)`
-    : `\${_def_${node.callDef}}`
+    ? `$(seth receipt "${f(node)}" contractAddress)`
+    : f(node)
 }
 
 function op(node) {
