@@ -6,6 +6,8 @@ let Optional/default = ./Prelude/Optional/default
 
 let List/map = ./Prelude/List/map
 
+let List/generate = ./Prelude/List/generate
+
 let Map = ./Prelude/Map/Type
 
 let Entry = ./Prelude/Map/Entry
@@ -29,6 +31,17 @@ let ethToWei
 let ethToGWei
     : Natural → Natural
     = λ(eth : Natural) → eth * 1000000000
+
+let pow
+    : Natural → Natural → Natural
+    =   λ(x : Natural)
+      → λ(n : Natural)
+      → (List/fold
+          Natural
+          (List/generate n Natural (λ(z : Natural) → 1))
+          Natural
+          (λ(a : Natural) → λ(b : Natural) → b * x)
+          1)
 
 let Void/empty
     : Void
@@ -191,6 +204,7 @@ let Plan/outputs
 
 in  { ethToWei = ethToWei
     , ethToGWei = ethToGWei
+    , pow = pow
     , Void = Void
     , Def = Def
     , DefEntry = DefEntry
