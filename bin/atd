@@ -16,7 +16,7 @@ usage() {
   echo -n >&2 "
 Usage: atd"
   [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
-          build [--prefix NAME] [ABI_BIN_DIR]
+          build [--module NAME] [ABI_BIN_DIR]
           link  DEP_DIR"
   echo -n >&2 "
           ast   ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
@@ -50,8 +50,8 @@ Arguments:"
 
 Options:"
   [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
-  --prefix NAME
-          Prefix shared ABI/BIN files for this build to avoid conflicts with
+  --module NAME
+          Separate shared ABI/BIN files for this build to avoid conflicts with
           dependencies"
 
   # NOTE: Hide for now
@@ -92,11 +92,11 @@ setAst() {
 
 build() {
   local abiDir
-  local prefix
+  local module
   while [[ -n $1 ]]; do
     case "$1" in
-      --prefix) shift
-        ATD_PREFIX="$1"
+      --module) shift
+        ATD_MODULE="$1"
         ;;
       -*)
         usage "\"$1\" is not a recognized option."
@@ -109,14 +109,14 @@ build() {
     shift
   done
 
-  prefix="${ATD_PREFIX:-${PWD##*/}}"
-  prefix="${prefix// /-}"
+  module="${ATD_MODULE:-${PWD##*/}}"
+  module="${module// /-}"
 
   [[ -d $abiDir ]] \
     || usage "Not creating './atd' directory because no ABI/BIN directory given as argument."
 
   rm -rf ./atd
-  "$BIN_PATH"/abi-to-dhall --prefix "$prefix" "$abiDir"/*.abi
+  "$BIN_PATH"/abi-to-dhall --module "$module" "$abiDir"/*.abi
 }
 
 link() {

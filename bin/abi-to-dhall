@@ -81,7 +81,7 @@ main() {
   mkdir -p \
     "$OUT_ABI_DIR" "$OUT_CON_DIR" \
     "$OUT_LIB_DIR" "$OUT_DEP_DIR" "$EVM_OUT_DIR"
-  cp -r "$PRELUDE_PATH" "$OUT_LIB_DIR/Prelude"
+  cp -r -T "$PRELUDE_PATH" "$OUT_LIB_DIR/Prelude"
   chmod -R +w "$OUT_LIB_DIR/Prelude"
   ln -srfT "$OUT_LIB_DIR/Prelude" "$OUT_CON_DIR/Prelude"
 
@@ -138,6 +138,8 @@ OUT_DEP_DIR="$OUT_DIR/dep"
 EVM_OUT_DIR="$OUT_DIR/evm"
 
 if [[ -n $ATD_UPDATE_PACKAGE ]]; then
+  [[ -d "$OUT_DIR/contract" ]] \
+    || { echo >&2 "No contracts present, doing nothing."; exit 0; }
   updatePackage
 else
   main "$@"

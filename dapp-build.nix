@@ -48,6 +48,7 @@ let
       export XDG_CACHE_HOME="$PWD/.cache"
       mkdir -p "XDG_CACHE_HOME"
 
+      mkdir -p $out/abi-to-dhall
       cd $out/abi-to-dhall
 
       abi-to-dhall --update-package
