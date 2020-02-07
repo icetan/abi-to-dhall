@@ -8,13 +8,13 @@ let schema = ./abiSchema.dhall
 
 let Hex = schema.Hex
 
+let Address = schema.Address
+
 let Void = schema.Void
 
 let Def = schema.Def
 
 let DefEntry = schema.DefEntry
-
-let TypeBase = schema.TypeBase
 
 let utils = ./utils.dhall
 
@@ -70,6 +70,8 @@ let asciiToHex
 
 let sig : Text → Hex.Type = λ(t : Text) → Hex::{ _hex = obj "sig" "\"${t}\"" }
 
+let from = Address::{ _address = "{ \"op\": \"from\", \"type\": \"address\" }" }
+
 let toJSON
     : List Void → Text
     =   λ(vs : List Void)
@@ -98,6 +100,7 @@ let renderer
       , callMem = callMem
       , sig = sig
       , asciiToHex = asciiToHex
+      , from = from
       , render = toJSON
       }
 

@@ -79,9 +79,10 @@ function op(node) {
     , asciiToHex: n => `$(seth --from-ascii "${n.asciiToHex}")`
     , fromHex: n => (
         truncWarn(`Expression '${op(n.value)}' might be truncated when cast to '${n.type}'.`),
-        /^(u?int256|bytes32)$/.test(n.type) ? `$(seth --to-${n.type} "${op(n.value)}")` : op(n.value))
-    , toHex: n => /^(u?int256|bytes32)$/.test(n.type) ? `$(seth --to-${n.type} "${op(n.value)}")` : op(n.value)
-    , lit: n => /^(u?int256|bytes32)$/.test(n.type) ? `$(seth --to-${n.type} "${n.value}")` : n.value
+        /^(u?int256|bytes32)$/.test(n.type) ? `0x$(seth --to-${n.type} "${op(n.value)}")` : op(n.value))
+    , toHex: n => /^(u?int256|bytes32)$/.test(n.type) ? `0x$(seth --to-${n.type} "${op(n.value)}")` : op(n.value)
+    , lit: n => /^(u?int256|bytes32)$/.test(n.type) ? `0x$(seth --to-${n.type} "${n.value}")` : n.value
+    , from: _ => `$ETH_FROM`
     , output: output
     , noop: _ => null
     }
@@ -95,6 +96,7 @@ function op(node) {
 function ast(node) {
   const ops = node.ops.map(op)
   return `#!/usr/bin/env bash
+: \${ETH_FROM?} \${ETH_GAS?}
 out() { { echo "$_sep \\"$1\\": $2";_sep=,; } 2>/dev/null; }${
 enableEstimates ? `
 est() { { estimates+="$_esep $1";_esep=,; } 2>/dev/null; }` : ""}

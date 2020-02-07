@@ -66,6 +66,11 @@ let Hex =
       , default = { _hex = "", def = [] : Def } -- size = 0,
       }
 
+let Address =
+      { Type = TypeBase ⩓ { _address : Text }
+      , default = { _address = "0x0", def = [] : Def } -- size = 20,
+      }
+
 let Void
     : Type
     = TypeBase ⩓ { _void : Text }
@@ -78,6 +83,7 @@ let Renderer
       , concatDefs : List Def → Def
       , sig : Text → Hex.Type
       , asciiToHex : Text → Hex.Type
+      , from : Address.Type
       , render : List Void → Text
       }
 
@@ -112,6 +118,7 @@ in  { Abi = Abi
     , Backend = Backend
     , TypeBase = TypeBase
     , Hex = Hex
+    , Address = Address
     , Void = Void
     , DefEntry = DefEntry
     , Def = Def
