@@ -16,6 +16,8 @@ in buildAbiToDhall {
   src = ./.;
 
   inherit solidityPackages;
+
+  # Select which contracts to compile
   abiFileGlobs = [
     "DSToken"
     "DSGuard"

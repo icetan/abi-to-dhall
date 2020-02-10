@@ -1,32 +1,37 @@
 # ABI to Dhall Example
 
-## Build
+## Run
 
 ```sh
-nix-build
+nix run -f 
 ```
 
 ## Run
 
-Preview deployment AST:
-
 ```sh
-nix-shell
 atd-deploy testchain
 ```
 
 ## Development
 
-Deploy using `seth` runtime:
+Preview deployment AST:
 
 ```sh
-atd run seth \
+nix-shell
+atd build
+atd ast \
   --input '(./dhall/schema.dhall).Config' ./config/config-testchain.json \
   --input '(./dhall/schema.dhall).Import'  ./config/import-testchain.json \
   -- ./dhall/main.dhall
 ```
 
-## Structure
+Run deploy against a testchain:
+
+```sh
+atd-deploy testchain
+```
+
+## Project Structure
 
 `dhall/`
 

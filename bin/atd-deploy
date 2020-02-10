@@ -25,6 +25,17 @@ Options:
   exit $ecode
 }
 
+onExit() {
+  local ecode=$?
+  trap - EXIT
+  if [[ $ecode == 0 ]]; then
+    echo >&2 "SUCCESSFULLY deployed to '$NETWORK', result in '$OUT_DIR'."
+  else
+    echo >&2 "FAILED to deploy to '$NETWORK', partial results in '$OUT_DIR'."
+  fi
+  exit $ecode
+}
+
 while [[ -n $1 ]]; do
   case "$1" in
     -c|--config) shift; CONFIG_DIR="$1" ;;
@@ -51,6 +62,10 @@ fi
 
 [[ $RPC_CHAIN == $NETWORK ]] \
   || usage "Network doesn't match with current node"
+
+trap 'exit 130' INT
+trap 'exit 131' TERM
+trap 'onExit' EXIT
 
 CONFIG_DIR="${CONFIG_DIR:-$PWD/config}"
 CONFIG_FILE="${CONFIG_FILE:-$CONFIG_DIR/config-$NETWORK.json}"
@@ -80,4 +95,5 @@ atd run seth \
   2> >(tee  "$OUT_DIR/result.log") \
   >         "$OUT_DIR/result.json"
 
-echo >&2 "Deployment to '$NETWORK' successful result in '$OUT_DIR'"
+cp -r -t "$OUT_DIR" "${ATD_PATH:-./atd}/evm"
+chmod -R u+w "$OUT_DIR"
