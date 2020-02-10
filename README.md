@@ -86,30 +86,25 @@ file.
 dhall <<EOF
 let atd = ./atd/package
 
-let DSToken = atd.contracts.DSToken
-
-let DSToken/create/bytes32 = atd.contracts.DSToken/create/bytes32
-
-let DSGuard = atd.contracts.DSGuard
-
-let DSGuard/create = atd.contracts.DSGuard/create
+let cs = atd.contracts
 
 let plan
-      = DSToken/create/bytes32
-          (atd.hexToBytes32 (atd.asciiToHex "MyToken"))
-          (λ(token : DSToken)
+    = cs.DSToken/create/bytes32
+        (atd.Bytes32/fromHex (atd.asciiToHex "MyToken"))
+        (λ(token : cs.DSToken)
 
-      → DSGuard/create
-          (λ(guard : DSGuard)
+    → cs.DSGuard/create
+        (λ(guard : cs.DSGuard)
 
-      → atd.Plan/concat
-            [ token.send/setAuthority/address guard.address
-            , atd.Plan/build
-              [ (atd.Address/output "TOKEN" token.address)
-              , (atd.Address/output "GUARD" guard.address)
-              ]
-            ]
-      ))
+    → atd.Plan/concat
+        [ token.send/setAuthority/address guard.address
+        , atd.Plan/build
+          [ (atd.Address/output "TOKEN" token.address)
+          , (atd.Address/output "GUARD" guard.address)
+          ]
+        ]
+    ))
+
 in atd.render (atd.Plan/run plan)
 EOF
 ```
