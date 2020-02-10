@@ -6,6 +6,7 @@ const command = process.argv[2]
 const opts = process.argv.slice(3)
 const enableEstimates = opts.indexOf("--estimate") !== -1
 const enableAsync = opts.indexOf("--async") !== -1
+const atdPath = process.env["ATD_PATH"] ? process.env["ATD_PATH"] : "./atd"
 
 function error(msg) {
   console.error(`Error: ${msg}`)
@@ -18,6 +19,10 @@ function truncWarn(msg) {
 
 function divZeroError(msg) {
   error(`ERROR DIVISION BY ZERO: ${msg}`)
+}
+
+function defVar(str) {
+  return `TX${str.padStart(5, "0")}`
 }
 
 function argTypes(node) {
@@ -68,7 +73,7 @@ function estimate(node) {
   const parse =
     { send: n => `est $(seth estimate "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)})`
     , call: n => `est $(seth estimate "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}) `
-    , create: n => `est $(seth estimate --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)})`
+    , create: n => `est $(seth estimate --create "${atdPath}/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)})`
     }
 
   if (!(node.op in parse)) return ""
@@ -87,8 +92,8 @@ function sendAsync() {
 function callDef(node) {
   const f =
     n => (n.type === "address" || n.type[0] === "address")
-      ? `0x\${_def_${n.callDef}#0x}`
-      : `\${_def_${n.callDef}}`
+      ? `0x\${${defVar(n.callDef)}#0x}`
+      : `\${${defVar(n.callDef)}}`
   return (enableAsync && node.opType === "create")
     ? `$(seth receipt "${f(node)}" contractAddress)`
     : f(node)
@@ -96,10 +101,10 @@ function callDef(node) {
 
 function op(node) {
   const parse =
-    { def: n => `${estimate(n.def)}_def_${n.id}=$(${op(n.def)})${nonce()}`
+    { def: n => `${estimate(n.def)}${defVar(n.id)}=$(${op(n.def)})${nonce()}`
     , send: n => `${estimate(n)}${sendAsync()}seth send "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , call: n => `${sendAsync()}seth call "${op(n.address)}" "${n.function}(${argTypes(n.argTypes)})(${argTypes(n.outputTypes)})" ${args(n.args)}`
-    , create: n => `${sendAsync()}seth send --create "./atd/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
+    , create: n => `${sendAsync()}seth send --create "${atdPath}/evm/${n.prefix}${n.contract}.bin" "${n.contract}(${argTypes(n.argTypes)})" ${args(n.args)}`
     , sig: n => `$(seth sig "${n.sig}")`
     , callDef: callDef
     , asciiToHex: n => `$(seth --from-ascii "${n.asciiToHex}")`
@@ -162,6 +167,7 @@ const script = ast(JSON.parse(data))
 
 if (command === 'run') {
   const child = spawn('bash')
+  child.on('close', code => process.exit(code));
   child.stdout.pipe(process.stdout, { end: false });
   child.stderr.pipe(process.stderr, { end: false });
   child.stdin.write(script)

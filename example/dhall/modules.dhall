@@ -1,6 +1,6 @@
-let Optional/map = ./atd/Prelude/Optional/map
+let Optional/map = ../atd/Prelude/Optional/map
 
-let atd = ./atd/package
+let atd = ../atd/package
 
 let Address = atd.Address
 
@@ -40,7 +40,7 @@ let DSGuard/create = ds-guard.DSGuard/create
 
 let schema = ./schema.dhall
 
-let Input = schema.Input
+let Import = schema.Import
 
 let Output = schema.Output
 
@@ -83,32 +83,32 @@ let outputAddresses
 let optionalAddress = Optional/map Text Address Address/build
 
 let guardModule
-      : Config → Input → Module Output
-      =   λ(conf : Config)
-        → λ(input : Input)
+      : Config → Import → Module Output
+      =   λ(config : Config)
+        → λ(import : Import)
         → λ(return : Output → Plan)
 
-        → createToken (optionalAddress input.tokenAddress)
+        → createToken (optionalAddress import.tokenAddress)
             (λ(token : DSToken)
 
-        → createGuard (optionalAddress input.guardAddress)
+        → createGuard (optionalAddress import.guardAddress)
             (λ(guard : DSGuard)
 
         → let send = Plan/concat
             [ token.send/mint/address-uint256
                 guard.address
-                (atd.Uint256/build conf.mint)
+                (atd.Uint256/build config.mint)
 
             , token.send/setAuthority/address
                 guard.address
 
             , guard.send/permit/address-address-bytes32
-                (Address/build conf.auctionAddress)
+                (Address/build config.auctionAddress)
                 token.address
                 (atd.Bytes32/fromHex sig/mint)
 
             , guard.send/permit/address-address-bytes32
-                (Address/build conf.auctionAddress)
+                (Address/build config.auctionAddress)
                 token.address
                 (atd.Bytes32/fromHex sig/burn)
             ]

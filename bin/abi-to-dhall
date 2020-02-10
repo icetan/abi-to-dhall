@@ -67,7 +67,7 @@ updatePackage() {
       -and ! -name lib \
       -and ! -name types \
       -and ! -name renderer \
-    | sed 's|^\([^/]*\)/\(.*\)/\([^/]*\)$|/\\ { \2 = ./\1/\2/\3 }|'
+    | sed 's|^\([^/]*\)/\(.*\)/\([^/]*\)$|/\\ { \2 = ./\1/\2/\3 }|;s|^contract/|/\\ ./contract/|'
   )
 
   rm -rf "$OUT_LIB_DIR/package"

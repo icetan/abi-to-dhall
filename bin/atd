@@ -14,33 +14,27 @@ usage() {
     || echo "(eg. seth)")
 
   echo -n >&2 "
-Usage: atd"
-  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+Usage: atd
           build [--module NAME] [ABI_BIN_DIR]
-          link  DEP_DIR"
-  echo -n >&2 "
+          link  DEP_DIR
           ast   ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
           print RUNTIME [--args ARG.. \;] ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
           run   RUNTIME [--args ARG.. \;] ([--input SCHEMA FILE]..) ([--ast FILE] | [--file FILE] | [--expr EXPR] | [-- EXPR..])
           help
 
-Commands:"
-  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+Commands:
   build   Create './atd' directory
-  link    Add another abi-to-dhall project as a dependency"
-  echo -n >&2 "
+  link    Add another abi-to-dhall project as a dependency
   ast     Print AST to STDOUT
   print   Print a runtimes deployment plan to STDOUT
   run     Execute a runtime deployment
   help    Print this message
 
-Arguments:"
-  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+Arguments:
   ABI_BIN_DIR
           Path to a directory containing ABI and BIN files
   DEP_DIR
-          Path to a project directory containing a './atd' directory"
-  echo -n >&2 "
+          Path to a project directory containing a './atd' directory
   RUNTIME
           Name of runtime to use ${runtimes}.
 
@@ -48,17 +42,10 @@ Arguments:"
           'atd-to-*' to your PATH. The program will be called and the AST will
           be piped to its STDIN.
 
-Options:"
-  [[ -n $ATD_PREBUILT ]] || echo -n >&2 "
+Options:
   --module NAME
           Separate shared ABI/BIN files for this build to avoid conflicts with
-          dependencies"
-
-  # NOTE: Hide for now
-  #-s,--state SCHEMA FILE
-  #        Use a JSON state file with the given SCHEMA expression
-
-  echo -n >&2 "
+          dependencies
   --args ARG..
           Arguments to pass to runtime process, needs to be ended with '\;'
   -i,--input SCHEMA FILE
@@ -72,6 +59,10 @@ Options:"
           A Dhall expression to evaluate as deploy config
   -- DHALL_EXPRESSION..
           Use rest of arguments as a Dhall expression (similar to --expr)
+
+Environment variables:
+  ATD_PATH
+          Use alternative path to dependencies
 
 Version: ${_VERSION:-unknown}
 "
@@ -91,7 +82,7 @@ setAst() {
 }
 
 build() {
-  local abiDir
+  local abiDir="${ATD_ABI_DIR:-./out}"
   local module
   while [[ -n $1 ]]; do
     case "$1" in
@@ -102,7 +93,7 @@ build() {
         usage "\"$1\" is not a recognized option."
         ;;
       *)
-        abiDir="${1:-${ATD_ABI_DIR:-./out}}"
+        abiDir="$1"
         break
         ;;
     esac
@@ -112,11 +103,24 @@ build() {
   module="${ATD_MODULE:-${PWD##*/}}"
   module="${module// /-}"
 
-  [[ -d $abiDir ]] \
-    || usage "Not creating './atd' directory because no ABI/BIN directory given as argument."
+  if [[ -n $ATD_PATH ]]; then
+    echo >&2 "Creating './atd' as symlink to '$ATD_PATH' because ATD_PATH is set."
 
-  rm -rf ./atd
-  "$BIN_PATH"/abi-to-dhall --module "$module" "$abiDir"/*.abi
+    rm -rf ./atd
+    ln -sT "$ATD_PATH" ./atd
+  else
+    [[ -d $abiDir ]] \
+      || usage "Not creating './atd' directory because '$abiDir' is not a directory."
+
+    rm -rf ./atd
+    for dir in $(find -L "$abiDir/" -maxdepth 1 -type d); do
+      "$BIN_PATH"/abi-to-dhall \
+        --module "$module" \
+        --namespace "${dir##*/}" \
+        $(find -L "$dir" -maxdepth 1 -type f -name "*.abi")
+    done
+    "$BIN_PATH"/abi-to-dhall  --update-package
+  fi
 }
 
 link() {
@@ -135,6 +139,7 @@ link() {
   done
 
   [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command."
+  [[ -w ./atd ]] || usage "'./atd' directory is not writable."
   [[ -d $depDir ]] || usage "No dependency path given."
   [[ -d "$depDir/atd" ]] || usage "No './atd' directory found in dependency path."
 
@@ -163,13 +168,6 @@ runArgs() {
 astArgs() {
   while [[ -n $1 ]]; do
     case "$1" in
-      #-s|--state) shift
-      #  [[ -z $stateFile ]] || usage "--state option given too many times."
-      #  [[ -f $2 ]] || usage "\"$2\" is not a file."
-      #  stateFile="$2"
-      #  stateExpr=$(json-to-dhall --records-loose "$1" < "$stateFile")
-      #  shift
-      #  ;;
       -i|--input) shift
         [[ -f $2 ]] || usage "\"$2\" is not a file."
         inputExpr+=" $(json-to-dhall --records-loose "$1" < "$2")"
@@ -200,12 +198,6 @@ astArgs() {
   [[ -z $astFile ]] || return 0
 
   [[ -n $expression ]] || usage "No Dhall expression or file given."
-  [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command."
-
-  #if [[ -n $stateExpr ]]; then
-  #  expression+=" $stateExpr"
-  #  stateExpr=""
-  #fi
 
   if [[ -n $inputExpr ]]; then
     expression+="$inputExpr"
@@ -220,7 +212,7 @@ ast() {
     [[ -f $astFile ]] || usage "'$astFile' is not a file"
     jq . "$astFile"
   else
-    dhall text <<<"(./atd/package).render ($expression)" | jq .
+    dhall text <<<"(${ATD_PATH:-./atd}/package).render ($expression)" | jq .
   fi
 }
 
@@ -236,7 +228,7 @@ plugin() {
   runArgs "${@:3}"
 
   astJson=$(ast)
-  $cmd "$action" "${runtimeArgs[@]}" <<<"$astJson"
+  ATD_PATH="${ATD_PATH:-$PWD/atd}" $cmd "$action" "${runtimeArgs[@]}" <<<"$astJson"
 }
 
 print() {
@@ -244,31 +236,25 @@ print() {
 }
 
 run() {
-  #astArgs "${@:2}"
-
-  #local stateJson
-  #if [[ -n $stateFile ]]; then
-  #  stateJson=$(plugin "$1" run)
-  #  jq -c . <<<"$stateJson" > /dev/null
-  #  mv "$stateFile" "${stateFile}.backup"
-  #  printf %s "$stateJson" > "$stateFile"
-  #else
-  #  plugin "$1" run
-  #fi
   plugin "$1" run "${@:2}"
 }
 
 case "$1" in
   build|link)
-    [[ -z $ATD_PREBUILT ]] \
-      || usage "Command not available when using pre-built './atd'."
-    $1 "${@:2}"
+    if [[ -n $ATD_NO_LINK ]]; then
+      echo >&2 "Refusing to build when ATD_NO_LINK is set."
+    else
+      $1 "${@:2}"
+    fi
     ;;
   ast|print|run)
-    if [[ -n $ATD_PREBUILT ]]; then
-      [[ ! -e ./atd || $(realpath ./atd) == $(realpath "$ATD_PREBUILT") ]] \
-        || usage "Using pre-built dependencies, remove existing './atd' first."
-      ln -sfT "$ATD_PREBUILT" ./atd
+    if [[ -z $ATD_NO_LINK ]]; then
+      if [[ -n $ATD_PATH ]]; then
+        [[ ! -e ./atd || $(realpath ./atd) == $(realpath "$ATD_PATH") ]] \
+          || usage "Using pre-built dependencies, remove existing './atd' first."
+        ln -sfT "$ATD_PATH" ./atd
+      fi
+      [[ -d ./atd ]] || usage "No './atd' directory found try the \`build\` command or set ATD_PATH."
     fi
     $1 "${@:2}"
     ;;

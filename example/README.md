@@ -11,30 +11,49 @@ nix-build
 Preview deployment AST:
 
 ```sh
-result/bin/example-atd ast -- ./main.dhall ./config.dhall
+nix-shell
+atd-deploy testchain
 ```
 
-Deploy using `seth` runtime (you will need to install `dapptools` first):
+## Development
+
+Deploy using `seth` runtime:
 
 ```sh
-result/bin/example-atd run seth -- ./main.dhall ./config.dhall
+atd run seth \
+  --input '(./dhall/schema.dhall).Config' ./config/config-testchain.json \
+  --input '(./dhall/schema.dhall).Import'  ./config/import-testchain.json \
+  -- ./dhall/main.dhall
 ```
 
 ## Structure
 
-`modules.dhall`
+`dhall/`
 
-A collection of deployment plans that can be reused.
+Directory containing Dhall deploy code.
 
 `main.dhall`
 
 Entry point for renderer.
 
-`config.dhall`
+`modules.dhall`
 
-The config values that should be passed to `./main.dhall`.
+A collection of deployment modules that can be reused.
 
-`configSchema.dhall`
+`schema.dhall`
 
-Schema describing config shape.
+Schema describing config and import format.
+
+`config/`
+
+Directory containing config and import JSON files.
+
+`config-testchain.json`
+
+The config values that will be passed to `main.dhall`.
+
+`import-testchain.json`
+
+The contract addresses that will be passed to `main.dhall` as the second
+argument.
 

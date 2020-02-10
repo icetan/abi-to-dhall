@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+usage() {
+  local ecode=0
+  if [[ -n $1 ]]; then echo >&2 "Error: $1"; ecode=1; fi
+
+  echo -n >&2 "
+Usage: atd-deploy [OPTIONS] NETWORK
+
+Options:
+  -c,--config DIR
+          Path to config directory with file name format {config,import}-NETWORK.json
+  -f
+          Path to a JSON config file
+  -i,--import
+          Path to a JSON file with contract addresses to use as imports
+  -o,--out
+          Path to directory where deployment results will be placed
+  -a,--async
+          Set runtime to asynchronous mode
+  -e,--estimate
+          Add transaction gas estimates to results file
+"
+  exit $ecode
+}
+
+while [[ -n $1 ]]; do
+  case "$1" in
+    -c|--config) shift; CONFIG_DIR="$1" ;;
+    -f) shift; CONFIG_FILE="$1" ;;
+    -i|--import) shift; IMPORT_FILE="$1" ;;
+    -o|--out) shift; OUT_DIR="$1" ;;
+    -a|--async) RUNTIME_ARGS+=(--async) ;;
+    -e|--estimate) RUNTIME_ARGS+=(--estimate) ;;
+    -*) usage "\"$1\" is not a recognized option." ;;
+    *) NETWORK="$1" ;;
+  esac
+  shift
+done
+
+[[ -n $NETWORK ]] \
+  || usage "Missing network"
+
+RPC_CHAIN=$(seth chain)
+if [[ $RPC_CHAIN == unknown ]]; then
+  RPC_CHAIN=testchain
+elif [[ $RPC_CHAIN == ethlive ]]; then
+  RPC_CHAIN=main
+fi
+
+[[ $RPC_CHAIN == $NETWORK ]] \
+  || usage "Network doesn't match with current node"
+
+CONFIG_DIR="${CONFIG_DIR:-$PWD/config}"
+CONFIG_FILE="${CONFIG_FILE:-$CONFIG_DIR/config-$NETWORK.json}"
+IMPORT_FILE="${IMPORT_FILE:-$CONFIG_DIR/import-$NETWORK.json}"
+OUT_DIR="${OUT_DIR:-$PWD/out-$NETWORK}"
+
+DHALL_DIR="${DHALL_DIR:-$PWD/dhall}"
+SCHEMA_FILE="$DHALL_DIR/schema.dhall"
+
+mkdir -p "$OUT_DIR"
+cp "$CONFIG_FILE" "$OUT_DIR/config.json"
+if [[ -f $IMPORT_FILE ]]; then
+  cp "$IMPORT_FILE" "$OUT_DIR/import.json"
+else
+  echo "{}" > "$OUT_DIR/import.json"
+fi
+
+atd ast \
+  --input "($SCHEMA_FILE).Config" "$OUT_DIR/config.json" \
+  --input "($SCHEMA_FILE).Import" "$OUT_DIR/import.json" \
+  -- $DHALL_DIR/main.dhall \
+  > "$OUT_DIR/ast.json"
+
+atd run seth \
+  --args "${RUNTIME_ARGS[@]}" \; \
+  --ast "$OUT_DIR/ast.json" \
+  2> >(tee  "$OUT_DIR/result.log") \
+  >         "$OUT_DIR/result.json"
+
+echo >&2 "Deployment to '$NETWORK' successful result in '$OUT_DIR'"

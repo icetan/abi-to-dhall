@@ -1,7 +1,7 @@
-{ pkgs ? import <nixpkgs> {}
-}: let
+{ pkgs ? import <nixpkgs> {} }: let
   version = "1.0.0";
 
+  inherit (pkgs) runCommand makeWrapper;
   inherit (pkgs.lib) optionalString makeBinPath;
 
   binPackage = { name, src, ... }@args: pkgs.stdenv.mkDerivation {
@@ -53,17 +53,49 @@
     sha256 = "0kg3rzag3irlcldck63rjspls614bc2sbs3zq44h0pzcz9v7z5h9";
   }) + "/Prelude";
 
-  binPaths = with pkgs; lib.makeBinPath [ coreutils gnused findutils dhall-haskell ];
-  atdBinPaths = with pkgs; lib.makeBinPath [ coreutils gnused bash jq dhall-haskell ];
+  binPaths = with pkgs; makeBinPath [ coreutils gnused findutils dhall-haskell ];
+  atdBinPaths = with pkgs; makeBinPath [ coreutils gnused findutils bash jq dhall-haskell ];
+
+  atd-to-seth = { seth }: pkgs.stdenv.mkDerivation {
+    name = "atd-to-seth-${version}";
+    src = pkgs.lib.sourceByRegex ./. [
+      "bin" "bin/atd-to-seth"
+    ];
+
+    nativeBuildInputs = [ makeWrapper ];
+    buildInputs = with pkgs; [ nodejs ];
+
+    buildPhase = "true";
+    installPhase = ''
+      mkdir -p $out
+      cp -r ./bin $out/bin
+      wrapProgram $out/bin/atd-to-seth \
+        --set PATH "${with pkgs; makeBinPath [ coreutils gnugrep bash bc seth ]}"
+    '';
+  };
+
+  atd-deploy = { seth }: runCommand "atd-deploy-${version}"
+    { nativeBuildInputs = [ makeWrapper ]; }
+    ''
+      mkdir -p $out/bin
+      cp ${./bin/atd-deploy} $out/bin/atd-deploy
+      wrapProgram $out/bin/atd-deploy \
+        --set PATH "${with pkgs; makeBinPath [
+          coreutils gnugrep bash seth
+          abi-to-dhall
+          (atd-to-seth { inherit seth; })
+        ]}"
+    '';
 
   abi-to-dhall = pkgs.stdenv.mkDerivation {
     name = "abi-to-dhall-${version}";
     src = pkgs.lib.sourceByRegex ./. [
-      ".*bin.*"
-      ".*dhall.*"
+      "bin"   "bin/abi-to-dhall" "bin/atd"
+      "dhall" "dhall/.*"
     ];
-    nativeBuildInputs = with pkgs; [ makeWrapper dhall-haskell ];
-    buildInputs = with pkgs; [ nodejs ];
+
+    nativeBuildInputs = [ makeWrapper dhall-haskell ];
+
     buildPhase = "true";
     installPhase = ''
       export XDG_CACHE_HOME="$PWD/.cache"
@@ -82,12 +114,13 @@
       wrapProgram $out/bin/atd \
         --set _VERSION ${version} \
         --prefix PATH : ${atdBinPaths}
-
-      wrapProgram $out/bin/atd-to-seth \
-        --prefix PATH : ${with pkgs; lib.makeBinPath [ bash bc ]}
     '';
     passthru = {
       buildAbiToDhall = pkgs.callPackage ./dapp-build.nix { inherit abi-to-dhall; };
+      deploy = atd-deploy;
+      runtimes = {
+        seth = atd-to-seth;
+      };
     };
   };
 in abi-to-dhall

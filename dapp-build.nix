@@ -1,5 +1,5 @@
-{ lib, stdenv, makeWrapper, runCommand, writeScriptBin, symlinkJoin
-, findutils, shellcheck
+{ lib, stdenv, runCommand, writeScriptBin, symlinkJoin, mkShell
+, findutils, shellcheck, bash
 , abi-to-dhall
 }:
 
@@ -9,6 +9,7 @@ let
   overrideOverrideAttrs = f: attrs: (f attrs) // {
     overrideAttrs = f_: overrideOverrideAttrs f (attrs // (f_ attrs));
   };
+
 in
 
 overrideOverrideAttrs (
@@ -17,10 +18,13 @@ overrideOverrideAttrs (
 , deps ? []
 , solidityPackages ? []
 , abiFileGlobs ? [ "*" ]
+, deployBin ? null
 , passthru ? {}
 , ... } @ args:
 
 let
+  filteredSrc = lib.sourceByRegex src [ "dhall" "dhall/.*" "config" "config/.*" ];
+
   buildDappPackage = dappPkg: runCommand "${name}-${dappPkg.name}-dapp-to-dhall"
     { nativeBuildInputs = [ abi-to-dhall findutils ]; }
     ''
@@ -40,15 +44,31 @@ let
 
   atdPackages = map buildDappPackage solidityPackages;
 
-  abiToDhallMerged = symlinkJoin {
+  shell = overrideOverrideAttrs (
+    { buildInputs ? [ abi-to-dhall ] ++ (lib.optional (deployBin != null) deployBin)
+    , extraBuildInputs ? []
+    , shellHook ? ""
+    , ...
+    } @ args: mkShell {
+      buildInputs = buildInputs ++ extraBuildInputs;
+      shellHook = ''
+        export ATD_ABI_DIR="$PWD/result/abi-to-dhall/dapp-out"
+      '' + shellHook;
+    } // args);
+
+  merged = symlinkJoin {
     name = "${name}-abi-to-dhall";
     paths = atdPackages;
     nativeBuildInputs = [ abi-to-dhall findutils ];
+    passthru = {
+      inherit solidityPackages shell;
+    } // passthru;
+
     postBuild = ''
       export XDG_CACHE_HOME="$PWD/.cache"
       mkdir -p "XDG_CACHE_HOME"
 
-      mkdir -p $out/abi-to-dhall
+      mkdir -p $out/abi-to-dhall $out/bin
       cd $out/abi-to-dhall
 
       abi-to-dhall --update-package
@@ -64,28 +84,24 @@ let
             '')
             deps)
       }
-    '';
-  };
-
-  runner = runCommand "${name}-atd" {
-      nativeBuildInputs = [ makeWrapper ];
-
-      ATD_MERGE = "${abiToDhallMerged}";
-
-      passthru = {
-        inherit solidityPackages;
-      } // passthru;
-    } ''
-      mkdir -p $out/abi-to-dhall
       ${
         lib.optionalString
           (src != null)
-          "cp -r -t $out/abi-to-dhall ${src}/*"
+          "cp -r -t . ${filteredSrc}/*"
       }
-      ln -sT "$ATD_MERGE/abi-to-dhall/dapp-out" $out/abi-to-dhall/dapp-out
-      ln -sT "$ATD_MERGE/abi-to-dhall/atd" $out/abi-to-dhall/atd
-      makeWrapper ${abi-to-dhall}/bin/atd $out/bin/${name}-atd \
-        --set ATD_PREBUILT "$out/abi-to-dhall/atd"
+      ${
+        if (deployBin != null) then ''
+          echo "#!${bash}/bin/bash
+          set -eo pipefail
+          export ATD_NO_LINK=1
+          export ATD_PATH=$out/abi-to-dhall/atd
+          export DHALL_DIR=$out/abi-to-dhall/dhall
+          export CONFIG_DIR=$out/abi-to-dhall/config
+          exec ${deployBin}/bin/atd-deploy \"\$@\"
+          " > $out/bin/${name}-deploy
+          chmod +x $out/bin/${name}-deploy
+        '' else ""
+      }
     '';
-
-in runner // (removeAttrs args [ "solidityPackages" "passthru" ]))
+  };
+in merged // (removeAttrs args [ "solidityPackages" "passthru" ]))

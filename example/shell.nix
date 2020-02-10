@@ -1,54 +1,20 @@
-{ pkgs ? import <nixpkgs> {}
-, atd ? import ./.. {}
+{ atd ? import ./.. {}
 , example ? import ./. {}
 , dapp2nix ? import (fetchGit {
     url = "https://github.com/icetan/dapp2nix";
     ref = "v2.1.7";
     rev = "5d433e6d5d8b89da808a51a3c8a0559893efbaf5";
   }) {}
+, dappPkgs ? import (fetchGit {
+    url = "https://github.com/dapphub/dapptools";
+    ref = "dapp/0.26.0";
+    rev = "eb2380c990179ada97fc1ee376ad6f2a32bfe833";
+  }) {}
 }@args:
 
-let
-  dependenciesOnly = example.overrideAttrs (attrs: { src = null; });
-
-in pkgs.mkShell {
-  buildInputs = [
-    atd
-    dependenciesOnly
+example.shell {
+  extraBuildInputs = [
     dapp2nix
+    (atd.runtimes.seth { inherit (dappPkgs) seth; })
   ];
-
-  shellHook = ''
-    run-example-atd() {
-      rm -f atd
-      example-atd $1 \
-        --input \
-          '(./schema.dhall).Config' \
-          "''${2:-./config.json}" \
-        --input \
-          '(./schema.dhall).Input' \
-          "''${3:-./empty.json}" \
-        -- ./main.dhall
-    }
-
-    example-ast() {
-      run-example-atd "ast" "$@"
-    }
-
-    example-run-seth() {
-      run-example-atd "run seth" "$@"
-    }
-
-    example-run-estimate() {
-      run-example-atd "run seth --args --estimate ;" "$@"
-    }
-
-    example-run-async() {
-      run-example-atd "run seth --args --async ;" "$@"
-    }
-
-    example-print-seth() {
-      run-example-atd "print seth" "$@"
-    }
-  '';
 }
