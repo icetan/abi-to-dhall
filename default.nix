@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> {} }: let
-  version = "1.0.0";
+  version = "1.0.1";
 
   inherit (pkgs) runCommand makeWrapper;
   inherit (pkgs.lib) optionalString makeBinPath;
