@@ -3,32 +3,30 @@
 ## Run
 
 ```sh
-nix run -f 
-```
-
-## Run
-
-```sh
-atd-deploy testchain
+nix run -f . -c example-deploy testchain
 ```
 
 ## Development
 
+```sh
+nix-shell
+nix-build
+ln -s result/abi-to-dhall/atd .
+```
+
 Preview deployment AST:
 
 ```sh
-nix-shell
-atd build
 atd ast \
   --input '(./dhall/schema.dhall).Config' ./config/config-testchain.json \
-  --input '(./dhall/schema.dhall).Import'  ./config/import-testchain.json \
-  -- ./dhall/main.dhall
+  --input '(./dhall/schema.dhall).Import' ./config/import-testchain.json \
+  -- ./dhall/main.dhall > >(tee ast.json)
 ```
 
 Run deploy against a testchain:
 
 ```sh
-atd-deploy testchain
+atd run seth --ast ast.json
 ```
 
 ## Project Structure
